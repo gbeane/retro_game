@@ -1,0 +1,28 @@
+[project]
+name = "pixel-blaster"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Glen Beane",email = "356266+gbeane@users.noreply.github.com"}
+]
+readme = "README.md"
+packages = [
+    { include = "pixel_blaster", from = "src" }
+]
+
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "pyside6 (>=6.9.1,<7.0.0)",
+    "numpy (>=2.3.1,<3.0.0)"
+]
+
+[project.scripts]
+pixel-blaster = "pixel_blaster.entrypoint:main"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.12.4"
+
