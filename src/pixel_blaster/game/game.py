@@ -44,7 +44,7 @@ class Game:
 
         # add a few asteroids for testing purposes
         self._asteroids = []
-        self._add_asteroids(12)
+        self._spawn_asteroids(12)
 
     @property
     def frame_buffer(self) -> "np.ndarray":
@@ -95,10 +95,12 @@ class Game:
             else:
                 self._ship.thrusting = False
 
-    def _add_asteroids(self, count: int) -> None:
-        """Add a specified number of asteroids to the game."""
+    def _spawn_asteroids(self, count: int) -> None:
+        """Add a specified number of asteroids to the game.
 
-        # asteroids will be spawned at the edges of the play area
+        Asteroids will be spawned at random locations on the edges of the play area
+        and will initialize their own velocity and direction.
+        """
         edge_margin = 40
         for _ in range(count):
             edge = np.random.choice(["top", "bottom", "left", "right"])
@@ -118,5 +120,8 @@ class Game:
             size = np.random.choice(
                 [Asteroid.Size.LARGE, Asteroid.Size.MEDIUM, Asteroid.Size.SMALL], p=[0.6, 0.3, 0.1]
             )
+
+            # for now pick a random color for the asteroid
+            # maybe we want to choose from a fixed color palette in the future
             color = tuple(np.random.randint(64, 192, size=3))
             self._asteroids.append(Asteroid(x=x, y=y, size=size, color=color))
