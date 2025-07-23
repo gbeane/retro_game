@@ -24,7 +24,7 @@ from .ship import Ship
 class FrameBuffer:
     """A class representing the frame buffer for the game screen."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._width = SCREEN_WIDTH
         self._height = SCREEN_HEIGHT
         self._frame_buffer = np.zeros((self._height, self._width, 3), dtype=np.uint8)
@@ -32,21 +32,21 @@ class FrameBuffer:
         self._score_font = ScoreFont()
 
     @property
-    def frame_buffer(self):
+    def frame_buffer(self) -> np.ndarray:
         """Returns the current frame buffer."""
         return self._frame_buffer
 
     @property
-    def width(self):
+    def width(self) -> int:
         """Returns the width of the game screen."""
         return self._width
 
     @property
-    def height(self):
+    def height(self) -> int:
         """Returns the height of the game screen."""
         return self._height
 
-    def reset_buffer(self):
+    def reset_buffer(self) -> None:
         """Resets the frame buffer to black."""
         self._frame_buffer.fill(0)
 
@@ -57,7 +57,7 @@ class FrameBuffer:
         text: str,
         font: Font,
         color: tuple = (255, 255, 255),
-    ):
+    ) -> None:
         """Draw right-aligned text on the frame buffer.
 
         Args:
@@ -102,7 +102,7 @@ class FrameBuffer:
         text: str,
         font: Font,
         color: tuple = (255, 255, 255),
-    ):
+    ) -> None:
         """Draw centered text on the frame buffer.
 
         Args:
@@ -119,7 +119,7 @@ class FrameBuffer:
         x_offset = x + text_width // 2
         self.draw_text_right_aligned(x_offset, y, text, font, color)
 
-    def draw_ship(self, ship: Ship):
+    def draw_ship(self, ship: Ship) -> None:
         """Draw the ship on the frame buffer."""
         theta = np.radians(ship.angle)
         cos_theta, sin_theta = np.cos(theta), np.sin(theta)
@@ -147,7 +147,7 @@ class FrameBuffer:
             if TOP_MARGIN <= fy < self.height and 0 <= fx < self.width:
                 self._frame_buffer[fy, fx] = ship.color
 
-    def draw_score(self, score: int, color=(255, 0, 0)):
+    def draw_score(self, score: int, color=(255, 0, 0)) -> None:
         """Draw the score right-aligned at the center of the frame buffer.
 
         Args:
@@ -163,7 +163,7 @@ class FrameBuffer:
         y = SCORE_TOP_MARGIN
         self.draw_text_right_aligned(x, y, score_str, self._score_font, color)
 
-    def draw_lives(self, lives: int, color=(255, 0, 0)):
+    def draw_lives(self, lives: int, color=(255, 0, 0)) -> None:
         """Draw the number of lives (0-99) right-aligned on the frame buffer.
 
         Args:
@@ -178,7 +178,7 @@ class FrameBuffer:
         y = SCORE_TOP_MARGIN
         self.draw_text_right_aligned(x, y, lives_str, self._score_font, color)
 
-    def draw_splash_screen(self):
+    def draw_splash_screen(self) -> None:
         """Draw the splash screen on the frame buffer."""
         self._frame_buffer.fill(0)
 

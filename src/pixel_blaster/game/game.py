@@ -6,11 +6,15 @@ Copyright (c) 2025 Glen Beane
 """
 
 import enum
+from typing import TYPE_CHECKING
 
 from pixel_blaster.constants import SCREEN_HEIGHT, SCREEN_WIDTH
 
 from .frame_buffer import FrameBuffer
 from .ship import Ship
+
+if TYPE_CHECKING:
+    import numpy as np
 
 
 class Game:
@@ -31,7 +35,7 @@ class Game:
         RIGHT = enum.auto()
         UP = enum.auto()
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._width = SCREEN_WIDTH
         self._height = SCREEN_HEIGHT
         self._frame_buffer = FrameBuffer()
@@ -40,17 +44,17 @@ class Game:
         self._show_splash_screen = True
 
     @property
-    def frame_buffer(self):
+    def frame_buffer(self) -> "np.ndarray":
         """Returns the current frame buffer."""
         return self._frame_buffer.frame_buffer
 
     @property
-    def width(self):
+    def width(self) -> int:
         """Returns the width of the game screen."""
         return self._width
 
     @property
-    def height(self):
+    def height(self) -> int:
         """Returns the height of the game screen."""
         return self._height
 
@@ -66,7 +70,7 @@ class Game:
             self._frame_buffer.draw_lives(self._ship.lives)
             self._frame_buffer.draw_score(self._score)
 
-    def handle_key(self, key: "Game.Key", pressed: bool):
+    def handle_key(self, key: "Game.Key", pressed: bool) -> None:
         """Control player movement/fire."""
         # if the splash screen is shown, any key press will hide it
         if self._show_splash_screen and pressed:

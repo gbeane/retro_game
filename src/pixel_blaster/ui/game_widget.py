@@ -30,7 +30,7 @@ class GameWidget(QWidget):
     _REPEAT_TIMER_INTERVAL = 25  # Interval for repeat key events in milliseconds
     _DEFAULT_SCALE = 5  # Default scale factor for the game display
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.game = Game()
         self.timer = QTimer(self)

@@ -6,6 +6,7 @@ Copyright (c) 2025 Glen Beane
 """
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import QMainWindow
 
 from .game_widget import GameWidget
@@ -14,7 +15,7 @@ from .game_widget import GameWidget
 class MainWindow(QMainWindow):
     """MainWindow class for the Pixel Blaster game."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("Pixel Blaster")
         self.game_widget = GameWidget(self)
@@ -26,7 +27,7 @@ class MainWindow(QMainWindow):
         )
         self.resize(self.game_widget.sizeHint())
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle the resize event to maintain aspect ratio."""
         new_width = event.size().width()
         new_height = int(new_width / self.aspect_ratio)

@@ -11,7 +11,7 @@ import numpy as np
 class Font:
     """A simple bitmap font for displaying numerical values in the game."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._font_dict = {
             "A": np.asarray(
                 [
@@ -407,7 +407,7 @@ class Font:
 class ScoreFont(Font):
     """A specialized font for rendering scores with a different character set."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self._font_dict = {
             "0": np.asarray(

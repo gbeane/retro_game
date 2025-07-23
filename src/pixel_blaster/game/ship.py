@@ -21,7 +21,7 @@ class Ship:
 
     _THRUST_POWER = 0.05  # Power of the ship's thrust
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._width = SCREEN_WIDTH
         self._height = SCREEN_HEIGHT
 
