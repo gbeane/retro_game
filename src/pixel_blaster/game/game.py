@@ -6,15 +6,14 @@ Copyright (c) 2025 Glen Beane
 """
 
 import enum
-from typing import TYPE_CHECKING
 
-from pixel_blaster.constants import SCREEN_HEIGHT, SCREEN_WIDTH
+import numpy as np
 
+from pixel_blaster.constants import SCREEN_HEIGHT, SCREEN_WIDTH, TOP_MARGIN
+
+from .asteroid import Asteroid
 from .frame_buffer import FrameBuffer
 from .ship import Ship
-
-if TYPE_CHECKING:
-    import numpy as np
 
 
 class Game:
@@ -43,6 +42,10 @@ class Game:
         self._ship = Ship()
         self._show_splash_screen = True
 
+        # add a few asteroids for testing purposes
+        self._asteroids = []
+        self._add_asteroids(12)
+
     @property
     def frame_buffer(self) -> "np.ndarray":
         """Returns the current frame buffer."""
@@ -65,6 +68,10 @@ class Game:
         if self._show_splash_screen:
             self._frame_buffer.draw_splash_screen()
         else:
+            for asteroid in self._asteroids:
+                asteroid.update()
+                self._frame_buffer.draw_asteroid(asteroid)
+
             self._ship.update()
             self._frame_buffer.draw_ship(self._ship)
             self._frame_buffer.draw_lives(self._ship.lives)
@@ -87,3 +94,27 @@ class Game:
                 self._ship.thrusting = True
             else:
                 self._ship.thrusting = False
+
+    def _add_asteroids(self, count: int) -> None:
+        """Add a specified number of asteroids to the game."""
+
+        # asteroids will be spawed at the edges of the play area
+        edge_margin = 40
+        for _ in range(count):
+            edge = np.random.choice(["top", "bottom", "left", "right"])
+            if edge == "top":
+                x = np.random.randint(0, SCREEN_WIDTH)
+                y = np.random.randint(TOP_MARGIN, edge_margin + TOP_MARGIN)
+            elif edge == "bottom":
+                x = np.random.randint(0, SCREEN_WIDTH)
+                y = np.random.randint(SCREEN_HEIGHT - edge_margin, SCREEN_HEIGHT)
+            elif edge == "left":
+                x = np.random.randint(0, edge_margin)
+                y = np.random.randint(TOP_MARGIN, SCREEN_HEIGHT)
+            else:  # right
+                x = np.random.randint(SCREEN_WIDTH - edge_margin, SCREEN_WIDTH)
+                y = np.random.randint(TOP_MARGIN, SCREEN_HEIGHT)
+
+            size = np.random.choice(list(Asteroid.Size))
+            color = tuple(np.random.randint(64, 192, size=3))
+            self._asteroids.append(Asteroid(x=x, y=y, size=size, color=color))

@@ -17,6 +17,7 @@ from pixel_blaster.constants import (
     TOP_MARGIN,
 )
 
+from .asteroid import Asteroid
 from .font import Font, ScoreFont
 from .ship import Ship
 
@@ -142,6 +143,36 @@ class FrameBuffer:
             # ensures that the ship is drawn only within the play area, which does not include the score area at the top
             if TOP_MARGIN <= fy < self.height and 0 <= fx < self.width:
                 self._frame_buffer[fy, fx] = ship.color
+
+    def draw_asteroid(self, asteroid: Asteroid) -> None:
+        """Draw an asteroid on the frame buffer."""
+        # Get the pixel map for the asteroid size
+        if asteroid.size == Asteroid.Size.SMALL:
+            pixel_map = Asteroid.pixmap_small
+        elif asteroid.size == Asteroid.Size.MEDIUM:
+            pixel_map = Asteroid.pixmap_medium
+        elif asteroid.size == Asteroid.Size.LARGE:
+            pixel_map = Asteroid.pixmap_large
+        else:
+            raise NotImplementedError(f"Asteroid size {asteroid.size} not implemented.")
+
+        h, w = pixel_map.shape
+        cx, cy = w // 2, h // 2
+
+        # Get indices of nonzero pixels
+        ys, xs = np.nonzero(pixel_map)
+        for py, px in zip(ys, xs, strict=False):
+            # Calculate relative position to center of the asteroid
+            rel_x = px - cx
+            rel_y = py - cy
+
+            # Translate to absolute position
+            fx = round(asteroid.x + rel_x)
+            fy = round(asteroid.y + rel_y)
+
+            # if pixel coordinates are within bounds set the pixel color in frame buffer
+            if TOP_MARGIN <= fy < self.height and 0 <= fx < self.width:
+                self._frame_buffer[fy, fx] = asteroid.color
 
     def draw_score(self, score: int, color=(255, 0, 0)) -> None:
         """Draw the score right-aligned at the center of the frame buffer.
