@@ -46,10 +46,6 @@ class FrameBuffer:
         """Returns the height of the game screen."""
         return self._height
 
-    def reset_buffer(self) -> None:
-        """Resets the frame buffer to black."""
-        self._frame_buffer.fill(0)
-
     def draw_text_right_aligned(
         self,
         x: int,
