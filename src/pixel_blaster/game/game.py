@@ -98,7 +98,7 @@ class Game:
     def _add_asteroids(self, count: int) -> None:
         """Add a specified number of asteroids to the game."""
 
-        # asteroids will be spawed at the edges of the play area
+        # asteroids will be spawned at the edges of the play area
         edge_margin = 40
         for _ in range(count):
             edge = np.random.choice(["top", "bottom", "left", "right"])
@@ -115,6 +115,8 @@ class Game:
                 x = np.random.randint(SCREEN_WIDTH - edge_margin, SCREEN_WIDTH)
                 y = np.random.randint(TOP_MARGIN, SCREEN_HEIGHT)
 
-            size = np.random.choice(list(Asteroid.Size))
+            size = np.random.choice(
+                [Asteroid.Size.LARGE, Asteroid.Size.MEDIUM, Asteroid.Size.SMALL], p=[0.6, 0.3, 0.1]
+            )
             color = tuple(np.random.randint(64, 192, size=3))
             self._asteroids.append(Asteroid(x=x, y=y, size=size, color=color))
