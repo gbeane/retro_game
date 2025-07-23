@@ -224,14 +224,6 @@ class FrameBuffer:
             color=(255, 255, 255),
         )
 
-        self.draw_text_centered(
-            x=self.width // 2,
-            y=self.height // 2 + 50,
-            text="COPYRIGHT © 2025 GLEN BEANE",
-            font=self._text_font,
-            color=(128, 128, 128),
-        )
-
     def clear(self, color: tuple[int, int, int] = (0, 0, 0)) -> None:
         """Clear the frame buffer."""
         self._frame_buffer[:, :] = color
