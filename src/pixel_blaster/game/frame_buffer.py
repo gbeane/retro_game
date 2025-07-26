@@ -117,7 +117,10 @@ class FrameBuffer:
         self.draw_text_right_aligned(x_offset, y, text, font, color)
 
     def draw_ship(self, ship: Ship) -> None:
-        """Draw the ship on the frame buffer."""
+        """Draw the ship on the frame buffer.
+
+        TODO: create a fixed number of sprites for the ship at different angles rather than transforming the pixel map.
+        """
         theta = np.radians(ship.angle)
         cos_theta, sin_theta = np.cos(theta), np.sin(theta)
 
@@ -230,6 +233,16 @@ class FrameBuffer:
             text="COPYRIGHT © 2025 GLEN BEANE",
             font=self._text_font,
             color=(128, 128, 128),
+        )
+
+    def draw_game_over(self) -> None:
+        """Draw the game over text on the frame buffer."""
+        self.draw_text_centered(
+            x=self.width // 2,
+            y=self.height // 2,
+            text="GAME OVER",
+            font=self._text_font,
+            color=(255, 255, 255),
         )
 
     def clear(self, color: tuple[int, int, int] = (0, 0, 0)) -> None:

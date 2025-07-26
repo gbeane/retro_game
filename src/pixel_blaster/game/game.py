@@ -9,7 +9,7 @@ import enum
 
 import numpy as np
 
-from pixel_blaster.constants import SCREEN_HEIGHT, SCREEN_WIDTH, TOP_MARGIN
+from pixel_blaster.constants import SCREEN_HEIGHT, SCREEN_WIDTH, SHIP_RESPAWN_DELAY, TOP_MARGIN
 
 from .asteroid import Asteroid
 from .frame_buffer import FrameBuffer
@@ -41,6 +41,7 @@ class Game:
         self._score = 123456
         self._ship = Ship()
         self._show_splash_screen = True
+        self._respawn_countdown = 0
 
         # add a few asteroids for testing purposes
         self._asteroids = []
@@ -61,21 +62,45 @@ class Game:
         """Returns the height of the game screen."""
         return self._height
 
+    @property
+    def _respawn_delay_active(self) -> bool:
+        """Check if the respawn delay is active."""
+        return self._respawn_countdown > 0
+
     def update(self) -> None:
         """Update the game state for the current frame."""
         self._frame_buffer.clear()
 
         if self._show_splash_screen:
             self._frame_buffer.draw_splash_screen()
-        else:
-            for asteroid in self._asteroids:
-                asteroid.update()
-                self._frame_buffer.draw_asteroid(asteroid)
+            return
 
-            self._ship.update()
+        for asteroid in self._asteroids:
+            asteroid.update()
+            self._frame_buffer.draw_asteroid(asteroid)
+
+        if self._ship.is_exploding:
             self._frame_buffer.draw_ship(self._ship)
-            self._frame_buffer.draw_lives(self._ship.lives)
-            self._frame_buffer.draw_score(self._score)
+            self._ship.update_explosion()
+
+            # has the explosion finished?
+            if not self._ship.is_exploding and self._ship.lives > 0:
+                self._start_respawn_delay()
+                self._ship.reset()
+        elif self._respawn_delay_active:
+            self._update_respawn_delay()
+
+        elif self._ship.lives <= 0:
+            # if the ship has no lives left, show the game over screen
+            self._frame_buffer.draw_game_over()
+        else:
+            self._ship.update()
+            if self._check_ship_collision():
+                self._ship.handle_collision()
+            self._frame_buffer.draw_ship(self._ship)
+
+        self._frame_buffer.draw_lives(self._ship.lives)
+        self._frame_buffer.draw_score(self._score)
 
     def handle_key(self, key: "Game.Key", pressed: bool) -> None:
         """Control player movement/fire."""
@@ -125,3 +150,63 @@ class Game:
             # maybe we want to choose from a fixed color palette in the future
             color = tuple(np.random.randint(64, 192, size=3))
             self._asteroids.append(Asteroid(x=x, y=y, size=size, color=color))
+
+    def _check_ship_collision(self) -> bool:
+        """Check if the ship collides with any asteroid and handle the collision."""
+        ship_box = self._get_bounding_box(self._ship.x, self._ship.y, self._ship.pixel_map)
+        for asteroid in self._asteroids:
+            asteroid_box = self._get_bounding_box(asteroid.x, asteroid.y, asteroid.pixel_map)
+            if self._bounding_box_overlap(ship_box, asteroid_box):
+                return True
+        return False
+
+    @staticmethod
+    def _get_bounding_box(
+        x: int, y: int, pixmap: np.ndarray, shrink: float = 0.8
+    ) -> tuple[int, int, int, int]:
+        """Calculate the bounding box for a pixel map.
+
+        Args:
+            x (int): The x-coordinate of the pixel map.
+            y (int): The y-coordinate of the pixel map.
+            pixmap (np.ndarray): The pixel map to calculate the bounding box for.
+            shrink (float): Factor to shrink the bounding box by.
+
+        Returns:
+            tuple[int, int, int, int]: The bounding box as (x1, y1, x2, y2).
+        """
+        h, w = pixmap.shape
+        cx, cy = x, y
+        half_w = w * shrink / 2
+        half_h = h * shrink / 2
+        return (
+            round(cx - half_w),
+            round(cy - half_h),
+            round(cx + half_w),
+            round(cy + half_h),
+        )
+
+    @staticmethod
+    def _bounding_box_overlap(
+        box1: tuple[int, int, int, int], box2: tuple[int, int, int, int]
+    ) -> bool:
+        """Check if two bounding boxes overlap.
+
+        Args:
+            box1 (tuple[int, int, int, int]): The first bounding box as (x1, y1, x2, y2).
+            box2 (tuple[int, int, int, int]): The second bounding box as (x1, y1, x2, y2).
+
+        Returns:
+            bool: True if the boxes overlap, False otherwise.
+        """
+        return not (
+            box1[2] < box2[0] or box1[0] > box2[2] or box1[3] < box2[1] or box1[1] > box2[3]
+        )
+
+    def _start_respawn_delay(self):
+        self._respawn_countdown = SHIP_RESPAWN_DELAY
+
+    def _update_respawn_delay(self):
+        """Update the respawn delay countdown."""
+        if self._respawn_countdown > 0:
+            self._respawn_countdown -= 1

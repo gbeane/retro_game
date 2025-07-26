@@ -20,6 +20,7 @@ class Ship:
     """Class representing the player's ship in the game."""
 
     _THRUST_POWER = 0.05  # Power of the ship's thrust
+    _EXPLOSION_DURATION = 60  # Duration of the explosion in frames
 
     def __init__(self) -> None:
         self._width = SCREEN_WIDTH
@@ -40,6 +41,9 @@ class Ship:
 
         # thrusting state, when True, the ship accelerates
         self._thrusting = False
+
+        # track exploding state
+        self._exploding = 0
 
         # Pixel map representing the ship's shape
         self._pixel_map = np.asarray(
@@ -80,6 +84,11 @@ class Ship:
         """Check if the ship is currently thrusting."""
         return self._thrusting
 
+    @property
+    def is_exploding(self) -> bool:
+        """Check if the ship is currently exploding."""
+        return self._exploding > 0
+
     @thrusting.setter
     def thrusting(self, value: bool) -> None:
         """Set whether the ship is currently thrusting."""
@@ -87,7 +96,21 @@ class Ship:
 
     @property
     def pixel_map(self) -> np.ndarray:
-        """Get the pixel map of the ship."""
+        """Get the pixel map of the ship, or a random pattern if exploding."""
+        if self._exploding > 0:
+            # Return a random pattern with the same shape as the ship
+            # TODO: make a sequence of explosion frames instead of random
+
+            explosion = np.random.choice([0, 1], size=self._pixel_map.shape, p=[0.7, 0.3]).astype(
+                np.uint8
+            )
+
+            # set the corners to 0 to avoid sharp edges
+            explosion[0, 0] = 0
+            explosion[0, -1] = 0
+            explosion[-1, 0] = 0
+            explosion[-1, -1] = 0
+            return explosion
         return self._pixel_map
 
     @property
@@ -97,6 +120,10 @@ class Ship:
 
     def update(self) -> None:
         """Update the ship's position and velocity based on current state."""
+        # don't update position if the ship is exploding
+        if self.is_exploding:
+            return
+
         if self.thrusting:
             theta = np.radians(self.angle)
             self._vx += self._THRUST_POWER * np.sin(theta)
@@ -126,6 +153,22 @@ class Ship:
         elif self._y > self._height:
             self._y = TOP_MARGIN
 
+    def update_explosion(self) -> None:
+        """Update the explosion state of the ship."""
+        if self._exploding > 0:
+            self._exploding -= 1
+        else:
+            self._exploding = 0
+
+    def reset(self) -> None:
+        """Reset the ship to its initial state."""
+        self._x = self._width // 2
+        self._y = self._height // 2
+        self._vx = self._vy = 0
+        self._angle = 0
+        self._exploding = 0
+        self._thrusting = False
+
     def rotate_right(self) -> None:
         """Rotate the ship to the right."""
         self._angle += 5
@@ -135,3 +178,17 @@ class Ship:
         """Rotate the ship to the left."""
         self._angle -= 5
         self._angle %= 360
+
+    def handle_collision(self) -> None:
+        """Handle collision with an asteroid."""
+        if self._exploding > 0:
+            # already exploding, ignore further collisions
+            return
+
+        self._lives -= 1
+        if self._lives < 0:
+            self._lives = 0
+
+        # start the explosion sequence and stop ship's movement
+        self._exploding = self._EXPLOSION_DURATION
+        self._vx = self._vy = 0

@@ -107,6 +107,18 @@ class Asteroid:
         """Get the color of the asteroid."""
         return self._color
 
+    @property
+    def pixel_map(self) -> np.ndarray:
+        """Get the pixel map of the asteroid based on its size."""
+        if self._size == Asteroid.Size.SMALL:
+            return self.pixmap_small
+        elif self._size == Asteroid.Size.MEDIUM:
+            return self.pixmap_medium
+        elif self._size == Asteroid.Size.LARGE:
+            return self.pixmap_large
+        else:
+            raise NotImplementedError(f"Asteroid size {self._size} not implemented.")
+
     def update(self) -> None:
         """Update the asteroid's position based on its velocity."""
         self._x += self._vx
