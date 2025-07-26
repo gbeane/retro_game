@@ -22,6 +22,14 @@ class Ship:
     _THRUST_POWER = 0.05  # Power of the ship's thrust
     _EXPLOSION_DURATION = 60  # Duration of the explosion in frames
 
+    _EXPLOSION_COLORS = [
+        (255, 0, 0),
+        (255, 165, 0),
+        (255, 255, 0),
+        (128, 0, 0),
+        (201, 112, 112),
+    ]
+
     def __init__(self) -> None:
         self._width = SCREEN_WIDTH
         self._height = SCREEN_HEIGHT
@@ -72,6 +80,12 @@ class Ship:
     @property
     def color(self) -> tuple[int, int, int]:
         """Get the color of the ship."""
+        if self.is_exploding:
+            # return a random explosion color
+            idx = np.random.randint(len(self._EXPLOSION_COLORS))
+            return self._EXPLOSION_COLORS[idx]
+
+        # normal ship color
         return self._color
 
     @property
