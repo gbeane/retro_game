@@ -1,5 +1,7 @@
 # Pixel Blaster
 
+![Screenshot](screenshot.png)
+
 **Copyright © 2025 Glen Beane**
 
 **Pixel Blaster** is a simple retro-style asteroid blaster game built with Python, PySide6, and Numpy. The game is 
