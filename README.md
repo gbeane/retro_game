@@ -27,5 +27,6 @@ updated by converting the Numpy array to a QImage and displaying it in a QLabel.
 
 ## Planned Features
 - Player ship can shoot at asteroids
+- Score tracking
 - Asteroids break into smaller asteroids when hit
 - Basic sound effects
