@@ -38,7 +38,7 @@ class Game:
         self._width = SCREEN_WIDTH
         self._height = SCREEN_HEIGHT
         self._frame_buffer = FrameBuffer()
-        self._score = 123456
+        self._score = 0
         self._ship = Ship()
         self._show_splash_screen = True
         self._respawn_countdown = 0
