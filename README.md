@@ -37,7 +37,6 @@ is updated by converting the Numpy array to a QImage and displaying it in a QLab
 - Large and medium asteroids break into smaller asteroids when hit
 
 ## Planned Features
-- ship-asteroid collision will destroy asteroid
-- Clearing all asteroids will spawn a new set of asteroids
+- ship-asteroid collision will destroy or split asteroid
 - After certain number of screens cleared, increase difficulty by increasing asteroid speed
 - Basic sound effects

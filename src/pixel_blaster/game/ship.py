@@ -146,6 +146,10 @@ class Ship:
         """Get the current number of lives of the ship."""
         return self._lives
 
+    def award_new_life(self) -> None:
+        """Award a new life to the ship."""
+        self._lives += 1
+
     def update(self) -> None:
         """Update the ship's position and velocity based on current state."""
         # don't update position if the ship is exploding

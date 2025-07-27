@@ -15,6 +15,9 @@ from pixel_blaster.constants import (
     ASTEROID_SPAWN_COUNT,
     ASTEROID_SPAWN_RADIUS,
     MAX_ASTEROIDS,
+    MAX_LIVES,
+    MAX_SCORE,
+    POINTS_FOR_NEW_LIFE,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
     SHIP_RESPAWN_DELAY,
@@ -56,6 +59,8 @@ class Game:
         self._ship = Ship()
         self._show_splash_screen = True
         self._respawn_countdown = 0
+        self._level = 1
+        self._next_bonus_life = POINTS_FOR_NEW_LIFE
 
         self._asteroids = []
         self._spawn_asteroids(ASTEROID_SPAWN_COUNT)
@@ -104,6 +109,9 @@ class Game:
 
         if self._ship.lives == 0:
             self._frame_buffer.draw_game_over()
+        elif len(self._asteroids) == 0:
+            self._level += 1
+            self._spawn_asteroids(ASTEROID_SPAWN_COUNT)
 
     def handle_key(self, key: "Game.Key", pressed: bool) -> None:
         """Control player movement/fire."""
@@ -137,8 +145,6 @@ class Game:
         If a projectile collides with an asteroid, both the projectile and the asteroid
         are removed from their respective lists, and the score is updated based on the
         asteroid's size.
-
-        #TODO: handle splitting of large and medium asteroids when hit by a projectile.
         """
         # track projectiles and asteroids to remove
         projectiles_to_remove = []
@@ -155,7 +161,7 @@ class Game:
                 if hit_asteroid := self._check_projectile_collision(projectile):
                     projectiles_to_remove.append(projectile)
                     asteroids_to_remove.append(hit_asteroid)
-                    self._score += hit_asteroid.points
+                    self._update_score(hit_asteroid.points)
                     # handle asteroid hit, which may result in new asteroids being spawned
                     new_asteroids.extend(self._handle_asteroid_hit(hit_asteroid))
             else:
@@ -215,7 +221,7 @@ class Game:
         for asteroid in self._asteroids:
             asteroid_box = self._get_bounding_box(asteroid.x, asteroid.y, asteroid.pixel_map, 0.9)
             if self._pixel_in_bounding_box(
-                projectile.position[0], projectile.position[1], asteroid_box
+                round(projectile.position[0]), round(projectile.position[1]), asteroid_box
             ):
                 return asteroid
         return None
@@ -390,3 +396,18 @@ class Game:
                     )
                 )
         return new_asteroids
+
+    def _update_score(self, points: int) -> None:
+        """Update the game score and handle bonus lives."""
+        if self._score == MAX_SCORE:
+            return
+
+        # award points
+        self._score += points
+        if self._score >= self._next_bonus_life and self._ship.lives < MAX_LIVES:
+            self._ship.award_new_life()
+            self._next_bonus_life += POINTS_FOR_NEW_LIFE
+
+        # cap score
+        if self._score > MAX_SCORE:
+            self._score = MAX_SCORE

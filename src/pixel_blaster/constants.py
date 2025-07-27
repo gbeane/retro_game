@@ -25,3 +25,4 @@ SCORE_HIT_MEDIUM = 50
 SCORE_HIT_SMALL = 100
 ASTEROID_SPAWN_RADIUS = 40  # Radius around the ship where asteroids can spawn
 MAX_ASTEROIDS = 20  # Maximum number of asteroids allowed on screen at once
+POINTS_FOR_NEW_LIFE = 5000  # Points required to gain an extra life
