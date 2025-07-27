@@ -20,15 +20,24 @@ are set each iteration of the game loop. The frame buffer is implemented with a 
 directly to the frame buffer during the game loops update phase, and at the end of the game loop the display is 
 updated by converting the Numpy array to a QImage and displaying it in a QLabel.
 
+## Keyboard Controls
+- **Left Arrow**: Rotate player ship counter-clockwise
+- **Right Arrow**: Rotate player ship clockwise
+- **Up Arrow**: Apply thrust to player ship
+- **Space**: Shoot a projectile from player ship
+
 ## Current Features
 - Player-controlled spaceship
 - Large retro bitmapped font (numbers only) for displaying score and player lives
 - Smaller retro bitmapped font (numbers and upper case letters) for displaying text
 - Asteroids that move around the screen
 - Collision detection between player ship and asteroids
+- Player ship can shoot projectile at asteroids either splitting them into smaller asteroids or destroying them
+- Score tracking
+- Large and medium asteroids break into smaller asteroids when hit
 
 ## Planned Features
-- Player ship can shoot at asteroids
-- Score tracking
-- Asteroids break into smaller asteroids when hit
+- ship-asteroid collision will destroy asteroid
+- Clearing all asteroids will spawn a new set of asteroids
+- After certain number of screens cleared, increase difficulty by increasing asteroid speed
 - Basic sound effects
