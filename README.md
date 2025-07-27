@@ -15,10 +15,10 @@ This is a work in progress, and the game is not yet complete.
 
 While the game is implemented using PySide6, I make minimal use of the Qt framework. Primarily, I use it for window 
 management, keyboard input, and the QTimer-based game loop. The game graphics themselves are implemented using a 
-frame-buffer approach (yes, I know the Atari 2600 did not have a frame buffer), where colors of individual pixels 
-are set each iteration of the game loop. The frame buffer is implemented with a Numpy array. Pixels are drawn 
-directly to the frame buffer during the game loops update phase, and at the end of the game loop the display is 
-updated by converting the Numpy array to a QImage and displaying it in a QLabel.
+simple frame-buffer approach (yes, I know the Atari 2600 did not have a frame buffer), where colors of individual
+pixels are set each iteration of the game loop. The frame buffer is implemented with a Numpy array. Pixels are 
+drawn directly to the frame buffer during the game loops update phase, and at the end of the game loop the display
+is updated by converting the Numpy array to a QImage and displaying it in a QLabel.
 
 ## Keyboard Controls
 - **Left Arrow**: Rotate player ship counter-clockwise
