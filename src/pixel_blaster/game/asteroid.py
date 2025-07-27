@@ -9,7 +9,8 @@ import enum
 
 import numpy as np
 
-from pixel_blaster.constants import SCREEN_HEIGHT, SCREEN_WIDTH, TOP_MARGIN
+from pixel_blaster.constants import SCORE_HIT_LARGE, SCORE_HIT_MEDIUM, SCORE_HIT_SMALL
+from pixel_blaster.game.util import wrap_position
 
 
 class Asteroid:
@@ -24,11 +25,13 @@ class Asteroid:
 
     pixmap_small = np.asarray(
         [
-            [0, 1, 1, 0, 0],
-            [1, 1, 1, 1, 0],
-            [1, 1, 1, 1, 1],
-            [0, 1, 1, 1, 0],
-            [0, 0, 1, 0, 0],
+            [0, 0, 1, 1, 0, 0, 0],
+            [0, 1, 1, 1, 1, 0, 0],
+            [1, 1, 1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 1, 1, 1],
+            [0, 0, 1, 1, 1, 0, 0],
+            [0, 0, 1, 1, 0, 0, 0],
         ],
         dtype=np.uint8,
     )
@@ -50,42 +53,49 @@ class Asteroid:
 
     pixmap_large = np.asarray(
         [
-            [0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
-            [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-            [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-            [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
-            [0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+            [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0],
+            [0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
+            [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0],
         ],
         dtype=np.uint8,
     )
 
     def __init__(
-        self, x: int, y: int, size: "Asteroid.Size", color: tuple[int, int, int] = (128, 128, 128)
+        self,
+        x: int,
+        y: int,
+        size: "Asteroid.Size",
+        color: tuple[int, int, int] = (128, 128, 128),
+        velocity: tuple[float, float] | None = None,
     ) -> None:
         self._x = x
         self._y = y
         self._size = size
         self._color = color
 
-        # generate random direction and speed
-        if size == Asteroid.Size.LARGE:
-            speed = np.random.uniform(0.1, 0.4)
-        elif size == Asteroid.Size.MEDIUM:
-            speed = np.random.uniform(0.3, 0.5)
-        else:  # SMALL
-            speed = np.random.uniform(0.5, 0.8)
-        angle = np.random.uniform(0, 2 * np.pi)
+        if velocity is not None:
+            # If velocity is provided, use it directly
+            self._vx, self._vy = velocity
+        else:
+            # generate random direction and speed
+            speed = self.initialize_asteroid_speed(size)
+            angle = np.random.uniform(0, 2 * np.pi)
 
-        # set the velocity components based on the angle and speed
-        self._vx = np.cos(angle) * speed
-        self._vy = np.sin(angle) * speed
+            # set the velocity components based on the angle and speed
+            self._vx = np.cos(angle) * speed
+            self._vy = np.sin(angle) * speed
 
     @property
     def x(self) -> int:
@@ -119,16 +129,42 @@ class Asteroid:
         else:
             raise NotImplementedError(f"Asteroid size {self._size} not implemented.")
 
+    @property
+    def points(self) -> int:
+        """Return the points awarded for hitting the asteroid."""
+        match self.size:
+            case Asteroid.Size.LARGE:
+                return SCORE_HIT_LARGE
+            case Asteroid.Size.MEDIUM:
+                return SCORE_HIT_MEDIUM
+            case Asteroid.Size.SMALL:
+                return SCORE_HIT_SMALL
+            case _:
+                raise NotImplementedError(f"Asteroid size {self.size} not implemented.")
+
+    @property
+    def velocity(self) -> tuple[float, float]:
+        """Get the velocity of the asteroid."""
+        return self._vx, self._vy
+
+    @staticmethod
+    def initialize_asteroid_speed(size: "Asteroid.Size") -> float:
+        """Initialize the asteroid's speed based on its size."""
+        if size == Asteroid.Size.LARGE:
+            speed = np.random.uniform(0.1, 0.15)
+        elif size == Asteroid.Size.MEDIUM:
+            speed = np.random.uniform(0.15, 0.2)
+        elif size == Asteroid.Size.SMALL:
+            speed = np.random.uniform(0.2, 0.3)
+        else:
+            raise NotImplementedError(f"Asteroid size {size} not implemented.")
+
+        return speed
+
     def update(self) -> None:
         """Update the asteroid's position based on its velocity."""
         self._x += self._vx
         self._y += self._vy
 
         # Screen wrapping
-        self._x %= SCREEN_WIDTH
-
-        # take the score area at top of screen into account so that is not considered part of the play area
-        if self._y < TOP_MARGIN:
-            self._y = SCREEN_HEIGHT
-        elif self._y > SCREEN_HEIGHT:
-            self._y = TOP_MARGIN
+        self._x, self._y = wrap_position((self._x, self._y))

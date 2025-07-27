@@ -6,14 +6,27 @@ Copyright (c) 2025 Glen Beane
 """
 
 import enum
+from collections.abc import MutableSequence, Sequence
+from typing import TypeVar
 
 import numpy as np
 
-from pixel_blaster.constants import SCREEN_HEIGHT, SCREEN_WIDTH, SHIP_RESPAWN_DELAY, TOP_MARGIN
+from pixel_blaster.constants import (
+    ASTEROID_SPAWN_COUNT,
+    ASTEROID_SPAWN_RADIUS,
+    MAX_ASTEROIDS,
+    SCREEN_HEIGHT,
+    SCREEN_WIDTH,
+    SHIP_RESPAWN_DELAY,
+    TOP_MARGIN,
+)
 
 from .asteroid import Asteroid
 from .frame_buffer import FrameBuffer
+from .projectile import Projectile
 from .ship import Ship
+
+T = TypeVar("T")
 
 
 class Game:
@@ -33,6 +46,7 @@ class Game:
         LEFT = enum.auto()
         RIGHT = enum.auto()
         UP = enum.auto()
+        FIRE = enum.auto()
 
     def __init__(self) -> None:
         self._width = SCREEN_WIDTH
@@ -43,9 +57,11 @@ class Game:
         self._show_splash_screen = True
         self._respawn_countdown = 0
 
-        # add a few asteroids for testing purposes
         self._asteroids = []
-        self._spawn_asteroids(12)
+        self._spawn_asteroids(ASTEROID_SPAWN_COUNT)
+
+        # add a projectile for testing purposes
+        self._projectiles = []
 
     @property
     def frame_buffer(self) -> "np.ndarray":
@@ -68,39 +84,26 @@ class Game:
         return self._respawn_countdown > 0
 
     def update(self) -> None:
-        """Update the game state for the current frame."""
+        """Update the game state for the current frame.
+
+        Handles most of the game logic, including updating the ship, projectiles, and asteroids.
+        Clears the frame buffer and draws the current game state, including the ship, asteroids,
+        projectiles, score, and lives. If the ship has no lives left, it draws the game over screen.
+        """
         self._frame_buffer.clear()
 
         if self._show_splash_screen:
             self._frame_buffer.draw_splash_screen()
             return
 
-        for asteroid in self._asteroids:
-            asteroid.update()
-            self._frame_buffer.draw_asteroid(asteroid)
-
-        if self._ship.is_exploding:
-            self._frame_buffer.draw_ship(self._ship)
-            self._ship.update_explosion()
-
-            # has the explosion finished?
-            if not self._ship.is_exploding and self._ship.lives > 0:
-                self._start_respawn_delay()
-                self._ship.reset()
-        elif self._respawn_delay_active:
-            self._update_respawn_delay()
-
-        elif self._ship.lives <= 0:
-            # if the ship has no lives left, show the game over screen
-            self._frame_buffer.draw_game_over()
-        else:
-            self._ship.update()
-            if self._check_ship_collision():
-                self._ship.handle_collision()
-            self._frame_buffer.draw_ship(self._ship)
-
+        self._update_projectiles()
+        self._update_asteroids()
+        self._update_ship()
         self._frame_buffer.draw_lives(self._ship.lives)
         self._frame_buffer.draw_score(self._score)
+
+        if self._ship.lives == 0:
+            self._frame_buffer.draw_game_over()
 
     def handle_key(self, key: "Game.Key", pressed: bool) -> None:
         """Control player movement/fire."""
@@ -119,6 +122,103 @@ class Game:
                 self._ship.thrusting = True
             else:
                 self._ship.thrusting = False
+        elif (
+            key == self.Key.FIRE
+            and pressed
+            and not self._respawn_delay_active
+            and not self._ship.is_exploding
+        ):
+            # fire a projectile only if the ship is not exploding or in respawn delay
+            self._projectiles.append(Projectile(self._ship))
+
+    def _update_projectiles(self) -> None:
+        """Update all projectiles and check for collisions with asteroids.
+
+        If a projectile collides with an asteroid, both the projectile and the asteroid
+        are removed from their respective lists, and the score is updated based on the
+        asteroid's size.
+
+        #TODO: handle splitting of large and medium asteroids when hit by a projectile.
+        """
+        # track projectiles and asteroids to remove
+        projectiles_to_remove = []
+        asteroids_to_remove = []
+        new_asteroids = []
+
+        # update each projectile and check for collisions with asteroids
+        for projectile in self._projectiles:
+            projectile.update()
+
+            if projectile.is_alive:
+                # after updating, projectile is still alive so we need to draw it and check for collisions
+                self._frame_buffer.draw_projectile(projectile)
+                if hit_asteroid := self._check_projectile_collision(projectile):
+                    projectiles_to_remove.append(projectile)
+                    asteroids_to_remove.append(hit_asteroid)
+                    self._score += hit_asteroid.points
+                    # handle asteroid hit, which may result in new asteroids being spawned
+                    new_asteroids.extend(self._handle_asteroid_hit(hit_asteroid))
+            else:
+                # projectile has reached its end of life, mark it for removal
+                projectiles_to_remove.append(projectile)
+
+        self._remove_items(self._projectiles, projectiles_to_remove)
+        self._remove_items(self._asteroids, asteroids_to_remove)
+
+        if new_asteroids:
+            # if there are new asteroids spawned, add them to the game
+            self._asteroids.extend(new_asteroids)
+
+    def _update_asteroids(self) -> None:
+        """Update all asteroids and draw them on the frame buffer."""
+        for asteroid in self._asteroids:
+            asteroid.update()
+            self._frame_buffer.draw_asteroid(asteroid)
+
+    def _update_ship(self) -> None:
+        """Update the ship's state and handle possible collisions between the ship and asteroids."""
+        if self._ship.is_exploding:
+            # ship is exploding, draw the explosion animation
+            self._frame_buffer.draw_ship(self._ship)
+            self._ship.update_explosion()
+
+            # if the explosion is done, reset the ship
+            if not self._ship.is_exploding and self._ship.lives > 0:
+                self._start_respawn_delay()
+                self._ship.reset()
+        elif self._respawn_delay_active:
+            # the ship doesn't need to be drawn if we're waiting for respawn
+            self._update_respawn_delay()
+        elif self._ship.lives:
+            # ship is alive.
+            self._ship.update()
+            if self._check_ship_collision():
+                self._ship.handle_collision()
+            self._frame_buffer.draw_ship(self._ship)
+
+    @staticmethod
+    def _remove_items(collection: MutableSequence[T], items: Sequence[T]) -> None:
+        """Remove specified items from a collection."""
+        for item in items:
+            if item in collection:
+                collection.remove(item)
+
+    def _check_projectile_collision(self, projectile: Projectile) -> Asteroid | None:
+        """Check if a projectile collides with any asteroid.
+
+        Args:
+            projectile (Projectile): The projectile to check for collisions.
+
+        Returns:
+            Asteroid | None: The asteroid that was hit by the projectile, or None if no collision occurred.
+        """
+        for asteroid in self._asteroids:
+            asteroid_box = self._get_bounding_box(asteroid.x, asteroid.y, asteroid.pixel_map, 0.9)
+            if self._pixel_in_bounding_box(
+                projectile.position[0], projectile.position[1], asteroid_box
+            ):
+                return asteroid
+        return None
 
     def _spawn_asteroids(self, count: int) -> None:
         """Add a specified number of asteroids to the game.
@@ -126,7 +226,7 @@ class Game:
         Asteroids will be spawned at random locations on the edges of the play area
         and will initialize their own velocity and direction.
         """
-        edge_margin = 40
+        edge_margin = ASTEROID_SPAWN_RADIUS
         for _ in range(count):
             edge = np.random.choice(["top", "bottom", "left", "right"])
             if edge == "top":
@@ -152,7 +252,11 @@ class Game:
             self._asteroids.append(Asteroid(x=x, y=y, size=size, color=color))
 
     def _check_ship_collision(self) -> bool:
-        """Check if the ship collides with any asteroid and handle the collision."""
+        """Check if the ship collides with any asteroid and handle the collision.
+
+        Returns:
+            bool: True if the ship has collided with an asteroid, False otherwise.
+        """
         ship_box = self._get_bounding_box(self._ship.x, self._ship.y, self._ship.pixel_map)
         for asteroid in self._asteroids:
             asteroid_box = self._get_bounding_box(asteroid.x, asteroid.y, asteroid.pixel_map)
@@ -203,10 +307,86 @@ class Game:
             box1[2] < box2[0] or box1[0] > box2[2] or box1[3] < box2[1] or box1[1] > box2[3]
         )
 
-    def _start_respawn_delay(self):
+    @staticmethod
+    def _pixel_in_bounding_box(x: int, y: int, box: tuple[int, int, int, int]) -> bool:
+        """Check if a pixel is within a bounding box.
+
+        Args:
+            x (int): The x-coordinate of the pixel.
+            y (int): The y-coordinate of the pixel.
+            box (tuple[int, int, int, int]): The bounding box as (x1, y1, x2, y2).
+
+        Returns:
+            bool: True if the pixel is within the bounding box, False otherwise.
+        """
+        return box[0] <= x < box[2] and box[1] <= y < box[3]
+
+    def _start_respawn_delay(self) -> None:
+        """Start the respawn delay countdown for the ship."""
         self._respawn_countdown = SHIP_RESPAWN_DELAY
 
-    def _update_respawn_delay(self):
+    def _update_respawn_delay(self) -> None:
         """Update the respawn delay countdown."""
         if self._respawn_countdown > 0:
             self._respawn_countdown -= 1
+
+    def _handle_asteroid_hit(self, asteroid: Asteroid) -> list[Asteroid]:
+        """Handle the event when an asteroid is hit by a projectile or player ship.
+
+        Returns:
+            list[Asteroid]: A list of new asteroids if the asteroid was large or medium and needs to be split.
+
+        Note: if we are at the maximum number of asteroids, we will not spawn new ones.
+        Instead, a large will be replaced by a single medium and a medium by a single small asteroid.
+        """
+        # when new asteroids are spawned, their new heading is adjusted by a fixed angle
+        angles = (
+            [20, -20]
+            if not len(self._asteroids) >= MAX_ASTEROIDS
+            else [np.random.choice([20, -20])]
+        )
+
+        def permute_velocity(
+            _velocity: tuple[float, float], angle_deg: float, size
+        ) -> tuple[float, float]:
+            """Permute the parent asteroid's velocity to create a new asteroid's velocity."""
+            v = np.array(_velocity)
+            angle_rad = np.deg2rad(angle_deg)
+            rotation_matrix = np.array(
+                [[np.cos(angle_rad), -np.sin(angle_rad)], [np.sin(angle_rad), np.cos(angle_rad)]]
+            )
+            rotated_v = rotation_matrix @ v
+            norm = np.linalg.norm(rotated_v)
+            if norm == 0:
+                rotated_v = np.array([1.0, 0.0])
+                norm = 1.0
+            speed = Asteroid.initialize_asteroid_speed(size)
+            new_v = rotated_v / norm * speed
+            return float(new_v[0]), float(new_v[1])
+
+        new_asteroids = []
+        if asteroid.size == Asteroid.Size.LARGE:
+            for angle in angles:
+                velocity = permute_velocity(asteroid.velocity, angle, Asteroid.Size.MEDIUM)
+                new_asteroids.append(
+                    Asteroid(
+                        x=asteroid.x,
+                        y=asteroid.y,
+                        size=Asteroid.Size.MEDIUM,
+                        color=asteroid.color,
+                        velocity=velocity,
+                    )
+                )
+        elif asteroid.size == Asteroid.Size.MEDIUM:
+            for angle in angles:
+                velocity = permute_velocity(asteroid.velocity, angle, Asteroid.Size.SMALL)
+                new_asteroids.append(
+                    Asteroid(
+                        x=asteroid.x,
+                        y=asteroid.y,
+                        size=Asteroid.Size.SMALL,
+                        color=asteroid.color,
+                        velocity=velocity,
+                    )
+                )
+        return new_asteroids

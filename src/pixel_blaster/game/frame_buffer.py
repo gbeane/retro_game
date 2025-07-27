@@ -121,7 +121,7 @@ class FrameBuffer:
 
         TODO: create a fixed number of sprites for the ship at different angles rather than transforming the pixel map.
         """
-        theta = np.radians(ship.angle)
+        theta = np.radians(ship.direction)
         cos_theta, sin_theta = np.cos(theta), np.sin(theta)
 
         h, w = ship.pixel_map.shape
@@ -176,6 +176,14 @@ class FrameBuffer:
             # if pixel coordinates are within bounds set the pixel color in frame buffer
             if TOP_MARGIN <= fy < self.height and 0 <= fx < self.width:
                 self._frame_buffer[fy, fx] = asteroid.color
+
+    def draw_projectile(self, projectile) -> None:
+        """Draw a projectile on the frame buffer."""
+        x = round(projectile.position[0])
+        y = round(projectile.position[1])
+
+        if TOP_MARGIN <= y < self.height and 0 <= x < self.width:
+            self._frame_buffer[y, x] = (255, 255, 255)
 
     def draw_score(self, score: int, color=(255, 0, 0)) -> None:
         """Draw the score right-aligned at the center of the frame buffer.
