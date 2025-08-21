@@ -20,15 +20,17 @@ class SFXPool(QObject):
 
         # one-shot sound effects pool
         self._sfx: dict[str, list[QSoundEffect]] = {}
-        self._idx: dict[str, int] = {}
+        self._idx: dict[str, int] = {}  # index used to round robin through the pool
 
-        # looped sound effects pool
+        # looped sound effects
         self._looped_sfx: dict[str, QSoundEffect] = {}
-        self._loop_fade_target: dict[str, float] = {}
-        self._loop_timers: dict[str, QTimer] = {}
-        self._loop_step: dict[str, float] = {}
+        self._loop_fade_target: dict[str, float] = {}  # target volume for fading
+        self._loop_timers: dict[str, QTimer] = {}  # timers for fading
+        self._loop_step: dict[str, float] = {}  # volume change per timer tick
 
-    def add_effect(self, name: str, path: Path, pool_size: int = 1, volume: float | None = None) -> None:
+    def add_effect(
+        self, name: str, path: Path, pool_size: int = 1, volume: float | None = None
+    ) -> None:
         """
         Add a sound effect to the pool.
 
@@ -114,13 +116,18 @@ class SFXPool(QObject):
 
         effect.play()
 
-    def play_looped(self, name: str, volume: float | None = None, fade_duration: int = 150) -> None:
+    def play_looped(
+        self, name: str, volume: float | None = None, fade_duration: int = 150
+    ) -> None:
         """Play a looped sound effect with a fade-in.
 
         Args:
             name (str): The name of the looped sound effect to play.
             volume (float | None): The volume to set for the looped sound effect. If None, uses the default target volume.
             fade_duration (int): The duration of the fade-in in milliseconds.
+
+        Sound will fade in from 0 volume to the target volume over the specified duration, and then will
+        loop indefinitely until stopped.
         """
         if name not in self._looped_sfx:
             return
@@ -130,7 +137,7 @@ class SFXPool(QObject):
 
         effect = self._looped_sfx[name]
         if not effect.isPlaying():
-            effect.setVolume(0.0) # start at 0 volume, will fade up to target volume
+            effect.setVolume(0.0)  # start at 0 volume, will fade up to target volume
             effect.play()
         self._fade_loop_to(name, volume, fade_duration)
 
@@ -160,8 +167,12 @@ class SFXPool(QObject):
             return
 
         current = effect.volume()
-        steps = max(1, fade_duration // timer.interval())  # number of steps it will take to reach target
-        self._loop_step[name] = (target - current) / steps # how much to change the volume each step
+        steps = max(
+            1, fade_duration // timer.interval()
+        )  # number of steps it will take to reach target
+        self._loop_step[name] = (
+            target - current
+        ) / steps  # how much to change the volume each step
 
         # save the target volume for later
         self._loop_fade_target[name] = target
@@ -173,6 +184,9 @@ class SFXPool(QObject):
 
         Args:
             name (str): The name of the looped sound effect being faded.
+
+        This is called periodically by a QTimer to adjust the volume of the effect over a specified duration to fade
+        the sound in or out.
         """
         effect = self._looped_sfx.get(name)
         timer = self._loop_timers.get(name)
@@ -187,6 +201,8 @@ class SFXPool(QObject):
         done = (self._loop_step[name] >= 0 and v >= target) or (
             self._loop_step[name] < 0 and v <= target
         )
+
+        # if done fading in or out, set volume to target and stop the timer.
         if done:
             v = target
             timer.stop()
