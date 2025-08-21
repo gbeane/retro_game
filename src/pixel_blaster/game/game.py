@@ -27,6 +27,7 @@ from pixel_blaster.constants import (
 from .asteroid import Asteroid
 from .frame_buffer import FrameBuffer
 from .projectile import Projectile
+from .sfx_pool import SFXPool
 from .ship import Ship
 
 T = TypeVar("T")
@@ -55,6 +56,7 @@ class Game:
         self._width = SCREEN_WIDTH
         self._height = SCREEN_HEIGHT
         self._frame_buffer = FrameBuffer()
+        self._sfx_pool = SFXPool()
         self._score = 0
         self._ship = Ship()
         self._show_splash_screen = True
@@ -67,6 +69,9 @@ class Game:
 
         # add a projectile for testing purposes
         self._projectiles = []
+
+        self._sfx_pool.add_effect("shoot", self._ship.blaster_sound_path, pool_size=10)
+        self._sfx_pool.add_effect("explosion", self._ship.explosion_sound_path, pool_size=1)
 
     @property
     def frame_buffer(self) -> "np.ndarray":
@@ -101,15 +106,18 @@ class Game:
             self._frame_buffer.draw_splash_screen()
             return
 
-        self._update_projectiles()
-        self._update_asteroids()
-        self._update_ship()
         self._frame_buffer.draw_lives(self._ship.lives)
         self._frame_buffer.draw_score(self._score)
+        self._update_asteroids()
 
         if self._ship.lives == 0:
             self._frame_buffer.draw_game_over()
-        elif len(self._asteroids) == 0:
+            return
+
+        self._update_projectiles()
+        self._update_ship()
+
+        if len(self._asteroids) == 0:
             self._level += 1
             self._spawn_asteroids(ASTEROID_SPAWN_COUNT)
 
@@ -118,6 +126,10 @@ class Game:
         # if the splash screen is shown, any key press will hide it
         if self._show_splash_screen and pressed:
             self._show_splash_screen = False
+            return
+
+        # do not handle controls if the game is over
+        if self._ship.lives == 0:
             return
 
         # otherwise handle game controls
@@ -138,6 +150,7 @@ class Game:
         ):
             # fire a projectile only if the ship is not exploding or in respawn delay
             self._projectiles.append(Projectile(self._ship))
+            self._sfx_pool.play("shoot")
 
     def _update_projectiles(self) -> None:
         """Update all projectiles and check for collisions with asteroids.
@@ -267,6 +280,7 @@ class Game:
         for asteroid in self._asteroids:
             asteroid_box = self._get_bounding_box(asteroid.x, asteroid.y, asteroid.pixel_map)
             if self._bounding_box_overlap(ship_box, asteroid_box):
+                self._sfx_pool.play("explosion")
                 return True
         return False
 

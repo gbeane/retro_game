@@ -27,7 +27,7 @@ class GameWidget(QWidget):
     - Provide a size hint based on the game's dimensions and a default scale factor.
     """
 
-    _REPEAT_TIMER_INTERVAL = 15  # Interval for repeat key events in milliseconds
+    _REPEAT_TIMER_INTERVAL = 20  # Interval for repeat key events in milliseconds
     _DEFAULT_SCALE = 5  # Default scale factor for the game display
 
     def __init__(self, parent=None) -> None:

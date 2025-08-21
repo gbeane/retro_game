@@ -5,7 +5,9 @@ Pixel Blaster
 Copyright (c) 2025 Glen Beane
 """
 
+import importlib.resources
 import typing
+from pathlib import Path
 
 import numpy as np
 
@@ -68,8 +70,27 @@ class Ship:
         )
 
         self._color = (208, 112, 112)
-
         self._gun_position = (0, 2)
+
+        with importlib.resources.as_file(
+            importlib.resources.files("pixel_blaster.resources.sounds") / "blaster1.wav"
+        ) as path:
+            self._blaster_sound = path
+
+        with importlib.resources.as_file(
+            importlib.resources.files("pixel_blaster.resources.sounds") / "ship_explosion.wav"
+        ) as path:
+            self._explosion_sound = path
+
+    @property
+    def blaster_sound_path(self) -> Path:
+        """Get the path to the blaster sound effect."""
+        return self._blaster_sound
+
+    @property
+    def explosion_sound_path(self) -> Path:
+        """Get the path to the explosion sound effect."""
+        return self._explosion_sound
 
     @property
     def x(self) -> int:

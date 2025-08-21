@@ -35,8 +35,10 @@ is updated by converting the Numpy array to a QImage and displaying it in a QLab
 - Player ship can shoot projectile at asteroids either splitting them into smaller asteroids or destroying them
 - Score tracking
 - Large and medium asteroids break into smaller asteroids when hit
+- Basic sound effects
 
 ## Planned Features
 - ship-asteroid collision will destroy or split asteroid
 - After certain number of screens cleared, increase difficulty by increasing asteroid speed
-- Basic sound effects
+- retro-style background music
+- additional sound effects (e.g., ship thrust, asteroid explosion)
