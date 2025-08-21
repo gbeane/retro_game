@@ -70,8 +70,9 @@ class Game:
         # add a projectile for testing purposes
         self._projectiles = []
 
-        self._sfx_pool.add_effect("shoot", self._ship.blaster_sound_path, pool_size=10)
+        self._sfx_pool.add_effect("shoot", self._ship.blaster_sound_path, volume=0.2, pool_size=20)
         self._sfx_pool.add_effect("explosion", self._ship.explosion_sound_path, pool_size=1)
+        self._sfx_pool.add_looped_effect("thruster", self._ship.thruster_sound_path)
 
     @property
     def frame_buffer(self) -> "np.ndarray":
@@ -109,14 +110,13 @@ class Game:
         self._frame_buffer.draw_lives(self._ship.lives)
         self._frame_buffer.draw_score(self._score)
         self._update_asteroids()
+        self._update_ship()
 
         if self._ship.lives == 0:
             self._frame_buffer.draw_game_over()
             return
 
         self._update_projectiles()
-        self._update_ship()
-
         if len(self._asteroids) == 0:
             self._level += 1
             self._spawn_asteroids(ASTEROID_SPAWN_COUNT)
@@ -140,8 +140,10 @@ class Game:
         elif key == self.Key.UP:
             if pressed:
                 self._ship.thrusting = True
+                self._sfx_pool.play_looped("thruster", 0.4, 250)
             else:
                 self._ship.thrusting = False
+                self._sfx_pool.stop_loop("thruster", 120)
         elif (
             key == self.Key.FIRE
             and pressed
@@ -212,6 +214,7 @@ class Game:
             # ship is alive.
             self._ship.update()
             if self._check_ship_collision():
+                self._sfx_pool.stop_loop("thruster", 0)
                 self._ship.handle_collision()
             self._frame_buffer.draw_ship(self._ship)
 

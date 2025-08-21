@@ -82,6 +82,11 @@ class Ship:
         ) as path:
             self._explosion_sound = path
 
+        with importlib.resources.as_file(
+            importlib.resources.files("pixel_blaster.resources.sounds") / "thruster.wav"
+        ) as path:
+            self._thruster_sound = path
+
     @property
     def blaster_sound_path(self) -> Path:
         """Get the path to the blaster sound effect."""
@@ -91,6 +96,11 @@ class Ship:
     def explosion_sound_path(self) -> Path:
         """Get the path to the explosion sound effect."""
         return self._explosion_sound
+
+    @property
+    def thruster_sound_path(self) -> Path:
+        """Get the path to the thruster sound effect."""
+        return self._thruster_sound
 
     @property
     def x(self) -> int:
@@ -239,3 +249,7 @@ class Ship:
         # start the explosion sequence and stop ship's movement
         self._exploding = self._EXPLOSION_DURATION
         self._vx = self._vy = 0
+
+        # if the ship was thrusting, stop it and stop the thruster sound
+        if self._thrusting:
+            self._thrusting = False
