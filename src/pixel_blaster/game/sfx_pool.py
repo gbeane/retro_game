@@ -38,6 +38,7 @@ class SFXPool(QObject):
         self._idx[name] = 0
 
     def has_effect(self, name: str) -> bool:
+        """Check if a sound effect exists in the pool."""
         return name in self._sfx
 
     def set_volume(self, name: str, volume: float) -> None:
@@ -46,6 +47,13 @@ class SFXPool(QObject):
             sfx.setVolume(volume)
 
     def play(self, name: str) -> None:
+        """Play a sound effect from the pool.
+
+        Args:
+            name (str): The name of the sound effect to play.
+
+        Does nothing if the effect does not exist in the pool.
+        """
         pool = self._sfx.get(name)
         if not pool:
             return
@@ -57,6 +65,11 @@ class SFXPool(QObject):
         effect.play()
 
     def stop(self, name: str | None = None) -> None:
+        """Stop playing a sound effect or all sound effects if no name is provided.
+
+        Args:
+            name (str | None): The name of the sound effect to stop. If None, stops all effects.
+        """
         if name is None:
             for pool in self._sfx.values():
                 for effect in pool:
