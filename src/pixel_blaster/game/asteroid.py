@@ -79,6 +79,7 @@ class Asteroid:
         size: "Asteroid.Size",
         color: tuple[int, int, int] = (128, 128, 128),
         velocity: tuple[float, float] | None = None,
+        speed_multiplier: float = 1.0,
     ) -> None:
         self._x = x
         self._y = y
@@ -90,7 +91,7 @@ class Asteroid:
             self._vx, self._vy = velocity
         else:
             # generate random direction and speed
-            speed = self.initialize_asteroid_speed(size)
+            speed = self.initialize_asteroid_speed(size) * speed_multiplier
             angle = np.random.uniform(0, 2 * np.pi)
 
             # set the velocity components based on the angle and speed

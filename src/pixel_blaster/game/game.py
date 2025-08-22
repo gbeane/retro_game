@@ -119,7 +119,8 @@ class Game:
         self._update_projectiles()
         if len(self._asteroids) == 0:
             self._level += 1
-            self._spawn_asteroids(ASTEROID_SPAWN_COUNT)
+            speed_multiplier = 1.0 + 0.1 * (self._level - 1)
+            self._spawn_asteroids(ASTEROID_SPAWN_COUNT, speed_multiplier)
 
     def handle_key(self, key: "Game.Key", pressed: bool) -> None:
         """Control player movement/fire."""
@@ -242,7 +243,7 @@ class Game:
                 return asteroid
         return None
 
-    def _spawn_asteroids(self, count: int) -> None:
+    def _spawn_asteroids(self, count: int, speed_multiplier: float = 1.0) -> None:
         """Add a specified number of asteroids to the game.
 
         Asteroids will be spawned at random locations on the edges of the play area
@@ -270,8 +271,10 @@ class Game:
 
             # for now pick a random color for the asteroid
             # maybe we want to choose from a fixed color palette in the future
-            color = tuple(np.random.randint(64, 192, size=3))
-            self._asteroids.append(Asteroid(x=x, y=y, size=size, color=color))
+            color: tuple[int, int, int] = tuple(np.random.randint(64, 192, size=3))
+            self._asteroids.append(
+                Asteroid(x=x, y=y, size=size, color=color, speed_multiplier=speed_multiplier)
+            )
 
     def _check_ship_collision(self) -> bool:
         """Check if the ship collides with any asteroid and handle the collision.
