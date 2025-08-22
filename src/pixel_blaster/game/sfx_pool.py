@@ -74,7 +74,7 @@ class SFXPool(QObject):
 
         effect = QSoundEffect(self)
         effect.setSource(QUrl.fromLocalFile(path.absolute()))
-        effect.setLoopCount(-2)  # infinite loop
+        effect.setLoopCount(QSoundEffect.Loop.Infinite.value)
         effect.setVolume(0)
 
         timer = QTimer(self)

@@ -54,32 +54,46 @@ class Game:
         FIRE = enum.auto()
 
     def __init__(self) -> None:
+        # screen and frame buffer setup
         self._width = SCREEN_WIDTH
         self._height = SCREEN_HEIGHT
         self._frame_buffer = FrameBuffer()
-        self._sfx_pool = SFXPool()
-        self._score = 0
-        self._ship = Ship()
-        self._show_splash_screen = True
-        self._respawn_countdown = 0
-        self._level = 1
-        self._next_bonus_life = POINTS_FOR_NEW_LIFE
 
+        # game state
+        self._score = 0
+        self._level = 1
+        self._respawn_countdown = 0
+        self._next_bonus_life = POINTS_FOR_NEW_LIFE
+        self._show_splash_screen = True
+        self._ship = Ship()
         self._asteroids = []
         self._spawn_asteroids(ASTEROID_SPAWN_COUNT)
-
-        # add a projectile for testing purposes
         self._projectiles = []
 
+        # audio file paths
         with importlib.resources.as_file(
-            importlib.resources.files("pixel_blaster.resources.sounds") / "background.wav"
+                importlib.resources.files("pixel_blaster.resources.sounds") / "background.wav"
         ) as path:
-            self._background = path
+            background_sound = path
 
+        with importlib.resources.as_file(
+                importlib.resources.files("pixel_blaster.resources.sounds") / "asteroid_hit.wav"
+        ) as path:
+            asteroid_hit_sound = path
+
+        with importlib.resources.as_file(
+                importlib.resources.files("pixel_blaster.resources.sounds") / "1up.wav"
+        ) as path:
+            new_life_sound = path
+
+        # sound effects pool setup
+        self._sfx_pool = SFXPool()
         self._sfx_pool.add_effect("shoot", self._ship.blaster_sound_path, volume=0.2, pool_size=20)
         self._sfx_pool.add_effect("explosion", self._ship.explosion_sound_path, pool_size=1)
+        self._sfx_pool.add_effect("asteroid_hit", asteroid_hit_sound, volume=0.4, pool_size=20)
+        self._sfx_pool.add_effect("new_life", new_life_sound, volume=0.1, pool_size=1)
         self._sfx_pool.add_looped_effect("thruster", self._ship.thruster_sound_path)
-        self._sfx_pool.add_looped_effect("background", self._background)
+        self._sfx_pool.add_looped_effect("background", background_sound)
 
     @property
     def frame_buffer(self) -> "np.ndarray":
@@ -149,7 +163,7 @@ class Game:
         elif key == self.Key.UP:
             if pressed:
                 self._ship.thrusting = True
-                self._sfx_pool.play_looped("thruster", 0.4, 250)
+                self._sfx_pool.play_looped("thruster", 0.3, 250)
             else:
                 self._ship.thrusting = False
                 self._sfx_pool.stop_loop("thruster", 120)
@@ -188,6 +202,7 @@ class Game:
                     self._update_score(hit_asteroid.points)
                     # handle asteroid hit, which may result in new asteroids being spawned
                     new_asteroids.extend(self._handle_asteroid_hit(hit_asteroid))
+                    self._sfx_pool.play("asteroid_hit")
             else:
                 # projectile has reached its end of life, mark it for removal
                 projectiles_to_remove.append(projectile)
@@ -436,6 +451,7 @@ class Game:
         self._score += points
         if self._score >= self._next_bonus_life and self._ship.lives < MAX_LIVES:
             self._ship.award_new_life()
+            self._sfx_pool.play("new_life")
             self._next_bonus_life += POINTS_FOR_NEW_LIFE
 
         # cap score
