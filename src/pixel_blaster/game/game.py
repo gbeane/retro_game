@@ -6,6 +6,7 @@ Copyright (c) 2025 Glen Beane
 """
 
 import enum
+import importlib.resources
 from collections.abc import MutableSequence, Sequence
 from typing import TypeVar
 
@@ -70,9 +71,15 @@ class Game:
         # add a projectile for testing purposes
         self._projectiles = []
 
+        with importlib.resources.as_file(
+            importlib.resources.files("pixel_blaster.resources.sounds") / "background.wav"
+        ) as path:
+            self._background = path
+
         self._sfx_pool.add_effect("shoot", self._ship.blaster_sound_path, volume=0.2, pool_size=20)
         self._sfx_pool.add_effect("explosion", self._ship.explosion_sound_path, pool_size=1)
         self._sfx_pool.add_looped_effect("thruster", self._ship.thruster_sound_path)
+        self._sfx_pool.add_looped_effect("background", self._background)
 
     @property
     def frame_buffer(self) -> "np.ndarray":
@@ -127,6 +134,7 @@ class Game:
         # if the splash screen is shown, any key press will hide it
         if self._show_splash_screen and pressed:
             self._show_splash_screen = False
+            self._sfx_pool.play_looped("background", 0.03, 0)
             return
 
         # do not handle controls if the game is over
@@ -217,6 +225,8 @@ class Game:
             if self._check_ship_collision():
                 self._sfx_pool.stop_loop("thruster", 0)
                 self._ship.handle_collision()
+                if self._ship.lives == 0:
+                    self._sfx_pool.stop_loop("background", 2000)
             self._frame_buffer.draw_ship(self._ship)
 
     @staticmethod

@@ -152,11 +152,11 @@ class Asteroid:
     def initialize_asteroid_speed(size: "Asteroid.Size") -> float:
         """Initialize the asteroid's speed based on its size."""
         if size == Asteroid.Size.LARGE:
-            speed = np.random.uniform(0.1, 0.15)
+            speed = np.random.uniform(0.2, 0.25)
         elif size == Asteroid.Size.MEDIUM:
-            speed = np.random.uniform(0.15, 0.2)
+            speed = np.random.uniform(0.25, 0.3)
         elif size == Asteroid.Size.SMALL:
-            speed = np.random.uniform(0.2, 0.3)
+            speed = np.random.uniform(0.3, 0.4)
         else:
             raise NotImplementedError(f"Asteroid size {size} not implemented.")
 
