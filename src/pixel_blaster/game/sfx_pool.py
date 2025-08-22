@@ -31,8 +31,7 @@ class SFXPool(QObject):
     def add_effect(
         self, name: str, path: Path, pool_size: int = 1, volume: float | None = None
     ) -> None:
-        """
-        Add a sound effect to the pool.
+        """Add a one-shot sound effect to the pool.
 
         Args:
             name (str): The name of the sound effect.
@@ -44,6 +43,9 @@ class SFXPool(QObject):
         """
         if name in self._sfx or name in self._looped_sfx:
             return
+
+        if not path.exists():
+            raise FileNotFoundError(f"Sound effect file not found: {path}")
 
         if volume is None:
             volume = self._DEFAULT_VOLUME
@@ -72,6 +74,9 @@ class SFXPool(QObject):
         if name in self._looped_sfx or name in self._sfx:
             return
 
+        if not path.exists():
+            raise FileNotFoundError(f"Looped sound effect file not found: {path}")
+
         effect = QSoundEffect(self)
         effect.setSource(QUrl.fromLocalFile(path.absolute()))
         effect.setLoopCount(QSoundEffect.Loop.Infinite.value)
@@ -91,10 +96,12 @@ class SFXPool(QObject):
         return name in self._sfx or name in self._looped_sfx
 
     def set_volume(self, name: str, volume: float) -> None:
-        """Set volume for all pooled players of an effect."""
+        """Set volume for an effect."""
+        # handle one-shot effects
         for sfx in self._sfx.get(name, []):
             sfx.setVolume(volume)
 
+        # handle looped effects
         if name in self._looped_sfx:
             self._looped_sfx[name].setVolume(max(0.0, min(1.0, volume)))
 

@@ -72,17 +72,17 @@ class Game:
 
         # audio file paths
         with importlib.resources.as_file(
-                importlib.resources.files("pixel_blaster.resources.sounds") / "background.wav"
+            importlib.resources.files("pixel_blaster.resources.sounds") / "background.wav"
         ) as path:
             background_sound = path
 
         with importlib.resources.as_file(
-                importlib.resources.files("pixel_blaster.resources.sounds") / "asteroid_hit.wav"
+            importlib.resources.files("pixel_blaster.resources.sounds") / "asteroid_hit.wav"
         ) as path:
             asteroid_hit_sound = path
 
         with importlib.resources.as_file(
-                importlib.resources.files("pixel_blaster.resources.sounds") / "1up.wav"
+            importlib.resources.files("pixel_blaster.resources.sounds") / "1up.wav"
         ) as path:
             new_life_sound = path
 
