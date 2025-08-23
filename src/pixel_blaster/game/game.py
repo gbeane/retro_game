@@ -199,7 +199,6 @@ class Game:
                 if hit_asteroid := self._check_projectile_collision(projectile):
                     projectiles_to_remove.append(projectile)
                     asteroids_to_remove.append(hit_asteroid)
-                    self._update_score(hit_asteroid.points)
                     # handle asteroid hit, which may result in new asteroids being spawned
                     new_asteroids.extend(self._handle_asteroid_hit(hit_asteroid))
                     self._sfx_pool.play("asteroid_hit")
@@ -321,6 +320,9 @@ class Game:
             asteroid_box = self._get_bounding_box(asteroid.x, asteroid.y, asteroid.pixel_map)
             if self._bounding_box_overlap(ship_box, asteroid_box):
                 self._sfx_pool.play("explosion")
+                self._sfx_pool.play("asteroid_hit")
+                self._asteroids.extend(self._handle_asteroid_hit(asteroid))
+                self._asteroids.remove(asteroid)
                 return True
         return False
 
@@ -399,6 +401,8 @@ class Game:
         Note: if we are at the maximum number of asteroids, we will not spawn new ones.
         Instead, a large will be replaced by a single medium and a medium by a single small asteroid.
         """
+        self._update_score(asteroid.points)
+
         # when new asteroids are spawned, their new heading is adjusted by a fixed angle
         angles = (
             [20, -20]
