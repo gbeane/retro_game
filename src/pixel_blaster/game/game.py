@@ -32,6 +32,9 @@ from .sfx_pool import SFXPool
 from .ship import Ship
 
 T = TypeVar("T")
+RESPAWN_EXTEND_DELAY = (
+    30  # Frames to extend respawn delay if asteroids are too close to spawn point
+)
 
 
 class Game:
@@ -69,31 +72,7 @@ class Game:
         self._asteroids = []
         self._spawn_asteroids(ASTEROID_SPAWN_COUNT)
         self._projectiles = []
-
-        # audio file paths
-        with importlib.resources.as_file(
-            importlib.resources.files("pixel_blaster.resources.sounds") / "background.wav"
-        ) as path:
-            background_sound = path
-
-        with importlib.resources.as_file(
-            importlib.resources.files("pixel_blaster.resources.sounds") / "asteroid_hit.wav"
-        ) as path:
-            asteroid_hit_sound = path
-
-        with importlib.resources.as_file(
-            importlib.resources.files("pixel_blaster.resources.sounds") / "1up.wav"
-        ) as path:
-            new_life_sound = path
-
-        # sound effects pool setup
-        self._sfx_pool = SFXPool()
-        self._sfx_pool.add_effect("shoot", self._ship.blaster_sound_path, volume=0.2, pool_size=20)
-        self._sfx_pool.add_effect("explosion", self._ship.explosion_sound_path, pool_size=1)
-        self._sfx_pool.add_effect("asteroid_hit", asteroid_hit_sound, volume=0.4, pool_size=20)
-        self._sfx_pool.add_effect("new_life", new_life_sound, volume=0.1, pool_size=1)
-        self._sfx_pool.add_looped_effect("thruster", self._ship.thruster_sound_path)
-        self._sfx_pool.add_looped_effect("background", background_sound)
+        self._sfx_pool = self._init_sound()
 
     @property
     def frame_buffer(self) -> "np.ndarray":
@@ -114,6 +93,11 @@ class Game:
     def _respawn_delay_active(self) -> bool:
         """Check if the respawn delay is active."""
         return self._respawn_countdown > 0
+
+    @property
+    def _speed_multiplier(self) -> float:
+        """Calculate the speed multiplier based on the current level."""
+        return 1.0 + (self._level - 1) * 0.1
 
     def update(self) -> None:
         """Update the game state for the current frame.
@@ -140,8 +124,7 @@ class Game:
         self._update_projectiles()
         if len(self._asteroids) == 0:
             self._level += 1
-            speed_multiplier = 1.0 + 0.1 * (self._level - 1)
-            self._spawn_asteroids(ASTEROID_SPAWN_COUNT, speed_multiplier)
+            self._spawn_asteroids(ASTEROID_SPAWN_COUNT, self._speed_multiplier)
 
     def handle_key(self, key: "Game.Key", pressed: bool) -> None:
         """Control player movement/fire."""
@@ -231,22 +214,10 @@ class Game:
                 self._start_respawn_delay()
                 self._ship.reset()
         elif self._respawn_delay_active:
-            # handle the delay before respawning the ship
-            # first, check if respawn delay is almost over and extend it if there are asteroids nearby
-            if self._respawn_countdown == 1:
-                ship_box = self._get_bounding_box(self._ship.x, self._ship.y, self._ship.pixel_map)
-                for asteroid in self._asteroids:
-                    asteroid_box = self._get_bounding_box(asteroid.x, asteroid.y, asteroid.pixel_map)
-                    if self._bounding_box_overlap(ship_box, asteroid_box):
-                        # if any asteroid is too close to the ship, extend the respawn delay
-                        self._respawn_countdown += 30
-                        return
             self._update_respawn_delay()
         elif self._ship.lives:
-            # ship is alive.
             self._ship.update()
             if self._check_ship_collision():
-                self._sfx_pool.stop_loop("thruster", 0)
                 self._ship.handle_collision()
                 if self._ship.lives == 0:
                     self._sfx_pool.stop_loop("background", 2000)
@@ -312,6 +283,10 @@ class Game:
     def _check_ship_collision(self) -> bool:
         """Check if the ship collides with any asteroid and handle the collision.
 
+        When a collision is detected, the ship's explosion sound is played, and
+        the asteroid hit sound is played. The asteroid is then handled as if it was hit,
+        which may result in it being split into smaller asteroids.
+
         Returns:
             bool: True if the ship has collided with an asteroid, False otherwise.
         """
@@ -319,6 +294,9 @@ class Game:
         for asteroid in self._asteroids:
             asteroid_box = self._get_bounding_box(asteroid.x, asteroid.y, asteroid.pixel_map)
             if self._bounding_box_overlap(ship_box, asteroid_box):
+                # ensure thruster sound is stopped
+                self._sfx_pool.stop_loop("thruster", 0)
+
                 self._sfx_pool.play("explosion")
                 self._sfx_pool.play("asteroid_hit")
                 self._asteroids.extend(self._handle_asteroid_hit(asteroid))
@@ -388,7 +366,21 @@ class Game:
         self._respawn_countdown = SHIP_RESPAWN_DELAY
 
     def _update_respawn_delay(self) -> None:
-        """Update the respawn delay countdown."""
+        """Update the respawn delay countdown.
+
+        Also checks if there are any asteroids too close to the ship and
+        extends the delay if so to avoid immediate collisions.
+        """
+        # first, check if respawn delay is almost over and extend it if there are asteroids nearby
+        if self._respawn_countdown == 1:
+            ship_box = self._get_bounding_box(self._ship.x, self._ship.y, self._ship.pixel_map)
+            for asteroid in self._asteroids:
+                asteroid_box = self._get_bounding_box(asteroid.x, asteroid.y, asteroid.pixel_map)
+                if self._bounding_box_overlap(ship_box, asteroid_box):
+                    # if any asteroid is too close to the ship, extend the respawn delay
+                    self._respawn_countdown = RESPAWN_EXTEND_DELAY
+                    return
+
         if self._respawn_countdown > 0:
             self._respawn_countdown -= 1
 
@@ -410,28 +402,12 @@ class Game:
             else [np.random.choice([20, -20])]
         )
 
-        def permute_velocity(
-            _velocity: tuple[float, float], angle_deg: float, size
-        ) -> tuple[float, float]:
-            """Permute the parent asteroid's velocity to create a new asteroid's velocity."""
-            v = np.array(_velocity)
-            angle_rad = np.deg2rad(angle_deg)
-            rotation_matrix = np.array(
-                [[np.cos(angle_rad), -np.sin(angle_rad)], [np.sin(angle_rad), np.cos(angle_rad)]]
-            )
-            rotated_v = rotation_matrix @ v
-            norm = np.linalg.norm(rotated_v)
-            if norm == 0:
-                rotated_v = np.array([1.0, 0.0])
-                norm = 1.0
-            speed = Asteroid.initialize_asteroid_speed(size)
-            new_v = rotated_v / norm * speed
-            return float(new_v[0]), float(new_v[1])
-
         new_asteroids = []
         if asteroid.size == Asteroid.Size.LARGE:
             for angle in angles:
-                velocity = permute_velocity(asteroid.velocity, angle, Asteroid.Size.MEDIUM)
+                velocity = self._permute_velocity(
+                    asteroid.velocity, angle, Asteroid.Size.MEDIUM, self._speed_multiplier
+                )
                 new_asteroids.append(
                     Asteroid(
                         x=asteroid.x,
@@ -443,7 +419,9 @@ class Game:
                 )
         elif asteroid.size == Asteroid.Size.MEDIUM:
             for angle in angles:
-                velocity = permute_velocity(asteroid.velocity, angle, Asteroid.Size.SMALL)
+                velocity = self._permute_velocity(
+                    asteroid.velocity, angle, Asteroid.Size.SMALL, self._speed_multiplier
+                )
                 new_asteroids.append(
                     Asteroid(
                         x=asteroid.x,
@@ -454,6 +432,28 @@ class Game:
                     )
                 )
         return new_asteroids
+
+    @staticmethod
+    def _permute_velocity(
+        velocity: tuple[float, float],
+        angle_deg: float,
+        size: Asteroid.Size,
+        speed_multiplier: float = 1.0,
+    ) -> tuple[float, float]:
+        """Permute the parent asteroid's velocity to create a new asteroid's velocity."""
+        v = np.array(velocity)
+        angle_rad = np.deg2rad(angle_deg)
+        rotation_matrix = np.array(
+            [[np.cos(angle_rad), -np.sin(angle_rad)], [np.sin(angle_rad), np.cos(angle_rad)]]
+        )
+        rotated_v = rotation_matrix @ v
+        norm = np.linalg.norm(rotated_v)
+        if norm == 0:
+            rotated_v = np.array([1.0, 0.0])
+            norm = 1.0
+        speed = Asteroid.initialize_asteroid_speed(size) * speed_multiplier
+        new_v = rotated_v / norm * speed
+        return float(new_v[0]), float(new_v[1])
 
     def _update_score(self, points: int) -> None:
         """Update the game score and handle bonus lives."""
@@ -470,3 +470,31 @@ class Game:
         # cap score
         if self._score > MAX_SCORE:
             self._score = MAX_SCORE
+
+    def _init_sound(self) -> SFXPool:
+        # audio file paths
+        with importlib.resources.as_file(
+            importlib.resources.files("pixel_blaster.resources.sounds") / "background.wav"
+        ) as path:
+            background_sound = path
+
+        with importlib.resources.as_file(
+            importlib.resources.files("pixel_blaster.resources.sounds") / "asteroid_hit.wav"
+        ) as path:
+            asteroid_hit_sound = path
+
+        with importlib.resources.as_file(
+            importlib.resources.files("pixel_blaster.resources.sounds") / "1up.wav"
+        ) as path:
+            new_life_sound = path
+
+        # sound effects pool setup
+        sfx_pool = SFXPool()
+        sfx_pool.add_effect("shoot", self._ship.blaster_sound_path, volume=0.2, pool_size=20)
+        sfx_pool.add_effect("explosion", self._ship.explosion_sound_path, pool_size=1)
+        sfx_pool.add_effect("asteroid_hit", asteroid_hit_sound, volume=0.4, pool_size=20)
+        sfx_pool.add_effect("new_life", new_life_sound, volume=0.1, pool_size=1)
+        sfx_pool.add_looped_effect("thruster", self._ship.thruster_sound_path)
+        sfx_pool.add_looped_effect("background", background_sound)
+
+        return sfx_pool
