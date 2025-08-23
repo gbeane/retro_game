@@ -39,6 +39,3 @@ is updated by converting the Numpy array to a QImage and displaying it in a QLab
 
 ## Planned Features
 - ship-asteroid collision will destroy or split asteroid
-- After certain number of screens cleared, increase difficulty by increasing asteroid speed
-- retro-style background music
-- additional sound effects (e.g., asteroid explosion)
