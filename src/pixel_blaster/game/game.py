@@ -232,7 +232,16 @@ class Game:
                 self._start_respawn_delay()
                 self._ship.reset()
         elif self._respawn_delay_active:
-            # the ship doesn't need to be drawn if we're waiting for respawn
+            # handle the delay before respawning the ship
+            # first, check if respawn delay is almost over and extend it if there are asteroids nearby
+            if self._respawn_countdown == 1:
+                ship_box = self._get_bounding_box(self._ship.x, self._ship.y, self._ship.pixel_map)
+                for asteroid in self._asteroids:
+                    asteroid_box = self._get_bounding_box(asteroid.x, asteroid.y, asteroid.pixel_map)
+                    if self._bounding_box_overlap(ship_box, asteroid_box):
+                        # if any asteroid is too close to the ship, extend the respawn delay
+                        self._respawn_countdown += 30
+                        return
             self._update_respawn_delay()
         elif self._ship.lives:
             # ship is alive.
