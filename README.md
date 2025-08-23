@@ -36,6 +36,3 @@ is updated by converting the Numpy array to a QImage and displaying it in a QLab
 - Score tracking
 - Large and medium asteroids break into smaller asteroids when hit
 - Basic sound effects
-
-## Planned Features
-- ship-asteroid collision will destroy or split asteroid
