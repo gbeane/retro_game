@@ -131,7 +131,7 @@ class Game:
         # if the splash screen is shown, any key press will hide it
         if self._show_splash_screen and pressed:
             self._show_splash_screen = False
-            self._sfx_pool.play_looped("background", 0.03, 0)
+            self._sfx_pool.play_looped("background", 0.05, 0)
             return
 
         # do not handle controls if the game is over
