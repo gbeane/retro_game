@@ -288,7 +288,7 @@ class Game:
                 y = np.random.randint(TOP_MARGIN, SCREEN_HEIGHT)
 
             size = np.random.choice(
-                [Asteroid.Size.LARGE, Asteroid.Size.MEDIUM, Asteroid.Size.SMALL], p=[0.6, 0.3, 0.1]
+                [Asteroid.Size.LARGE, Asteroid.Size.MEDIUM, Asteroid.Size.SMALL], p=[0.8, 0.2, 0.0]
             )
 
             # for now pick a random color for the asteroid
