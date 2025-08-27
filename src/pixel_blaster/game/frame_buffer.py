@@ -253,6 +253,50 @@ class FrameBuffer:
             color=(255, 255, 255),
         )
 
+        self.draw_text_centered(
+            x=self.width // 2,
+            y=self.height // 2 + 30,
+            text="PRESS ANY KEY TO RESTART",
+            font=self._text_font,
+            color=(255, 255, 255),
+        )
+
+    def draw_help_screen(self) -> None:
+        """Draw the help screen on the frame buffer."""
+        self.draw_text_centered(
+            x=self.width // 2,
+            y=20,
+            text="INSTRUCTIONS",
+            font=self._text_font,
+            color=(255, 165, 0),
+        )
+
+        instructions = [
+            "LEFT/RIGHT: ROTATE SHIP",
+            "UP: THRUST",
+            "SPACE: FIRE BLASTER",
+            "",
+        ]
+
+        y_offset = 50
+        for line in instructions:
+            self.draw_text_centered(
+                x=self.width // 2,
+                y=y_offset,
+                text=line,
+                font=self._text_font,
+                color=(255, 255, 255),
+            )
+            y_offset += 20
+
+        self.draw_text_centered(
+            x=self.width // 2,
+            y=y_offset,
+            text="PRESS ANY KEY TO START",
+            font=self._text_font,
+            color=(0, 165, 255),
+        )
+
     def clear(self, color: tuple[int, int, int] = (0, 0, 0)) -> None:
         """Clear the frame buffer."""
         self._frame_buffer[:, :] = color

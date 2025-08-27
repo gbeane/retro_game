@@ -68,6 +68,7 @@ class Game:
         self._respawn_countdown = 0
         self._next_bonus_life = POINTS_FOR_NEW_LIFE
         self._show_splash_screen = True
+        self._show_help_screen = False
         self._ship = Ship()
         self._asteroids = []
         self._spawn_asteroids(ASTEROID_SPAWN_COUNT)
@@ -112,6 +113,10 @@ class Game:
             self._frame_buffer.draw_splash_screen()
             return
 
+        if self._show_help_screen:
+            self._frame_buffer.draw_help_screen()
+            return
+
         self._frame_buffer.draw_lives(self._ship.lives)
         self._frame_buffer.draw_score(self._score)
         self._update_asteroids()
@@ -131,11 +136,18 @@ class Game:
         # if the splash screen is shown, any key press will hide it
         if self._show_splash_screen and pressed:
             self._show_splash_screen = False
+            self._show_help_screen = True
             self._sfx_pool.play_looped("background", 0.05, 0)
             return
 
-        # do not handle controls if the game is over
-        if self._ship.lives == 0:
+        if self._show_help_screen and pressed:
+            self._show_help_screen = False
+            return
+
+        # if the game is over, any key press will reset the game state
+        if self._ship.lives == 0 and pressed:
+            self._reset_game_state()
+            self._sfx_pool.play_looped("background", 0.05, 0)
             return
 
         # otherwise handle game controls
@@ -492,9 +504,20 @@ class Game:
         sfx_pool = SFXPool()
         sfx_pool.add_effect("shoot", self._ship.blaster_sound_path, volume=0.2, pool_size=20)
         sfx_pool.add_effect("explosion", self._ship.explosion_sound_path, pool_size=1)
-        sfx_pool.add_effect("asteroid_hit", asteroid_hit_sound, volume=0.4, pool_size=20)
+        sfx_pool.add_effect("asteroid_hit", asteroid_hit_sound, volume=0.6, pool_size=20)
         sfx_pool.add_effect("new_life", new_life_sound, volume=0.1, pool_size=1)
         sfx_pool.add_looped_effect("thruster", self._ship.thruster_sound_path)
         sfx_pool.add_looped_effect("background", background_sound)
 
         return sfx_pool
+
+    def _reset_game_state(self) -> None:
+        self._score = 0
+        self._level = 1
+        self._respawn_countdown = 0
+        self._next_bonus_life = POINTS_FOR_NEW_LIFE
+        self._show_splash_screen = False
+        self._ship = Ship()
+        self._asteroids = []
+        self._spawn_asteroids(ASTEROID_SPAWN_COUNT)
+        self._projectiles = []

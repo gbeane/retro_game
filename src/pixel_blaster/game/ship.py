@@ -228,12 +228,12 @@ class Ship:
 
     def rotate_right(self) -> None:
         """Rotate the ship to the right."""
-        self._direction += 5
+        self._direction += 2.5
         self._direction %= 360
 
     def rotate_left(self) -> None:
         """Rotate the ship to the left."""
-        self._direction -= 5
+        self._direction -= 2.5
         self._direction %= 360
 
     def handle_collision(self) -> None:
