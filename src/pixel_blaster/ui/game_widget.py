@@ -104,6 +104,8 @@ class GameWidget(QWidget):
             self.game.handle_key(Game.Key.UP, True)
         elif event.key() == Qt.Key.Key_Space:
             self.game.handle_key(Game.Key.FIRE, True)
+        elif event.key() == Qt.Key.Key_Return:
+            self.game.handle_key(Game.Key.ENTER, True)
         else:
             # for any other key, just let the game know a key was pressed but still allow default handling
             # this is specifically for the 'any' key handling to dismiss the splash screen

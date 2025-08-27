@@ -256,7 +256,7 @@ class FrameBuffer:
         self.draw_text_centered(
             x=self.width // 2,
             y=self.height // 2 + 30,
-            text="PRESS ANY KEY TO RESTART",
+            text="PRESS ENTER TO RESTART",
             font=self._text_font,
             color=(255, 255, 255),
         )

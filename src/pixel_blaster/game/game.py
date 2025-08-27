@@ -55,6 +55,7 @@ class Game:
         RIGHT = enum.auto()
         UP = enum.auto()
         FIRE = enum.auto()
+        ENTER = enum.auto()
 
     def __init__(self) -> None:
         # screen and frame buffer setup
@@ -130,6 +131,7 @@ class Game:
         if len(self._asteroids) == 0:
             self._level += 1
             self._spawn_asteroids(ASTEROID_SPAWN_COUNT, self._speed_multiplier)
+            self._setup_background_music()
 
     def handle_key(self, key: "Game.Key", pressed: bool) -> None:
         """Control player movement/fire."""
@@ -137,17 +139,21 @@ class Game:
         if self._show_splash_screen and pressed:
             self._show_splash_screen = False
             self._show_help_screen = True
-            self._sfx_pool.play_looped("background", 0.05, 0)
             return
 
         if self._show_help_screen and pressed:
             self._show_help_screen = False
+            self._setup_background_music()
             return
 
-        # if the game is over, any key press will reset the game state
-        if self._ship.lives == 0 and pressed:
+        # if the game is over, user can restart with the enter key
+        if self._ship.lives == 0 and key == self.Key.ENTER and pressed:
             self._reset_game_state()
             self._sfx_pool.play_looped("background", 0.05, 0)
+            return
+
+        # if the ship is in respawn delay/exploding/or game is over, ignore all other keys
+        if self._respawn_delay_active or self._ship.is_exploding or self._ship.lives == 0:
             return
 
         # otherwise handle game controls
@@ -521,3 +527,8 @@ class Game:
         self._asteroids = []
         self._spawn_asteroids(ASTEROID_SPAWN_COUNT)
         self._projectiles = []
+
+    def _setup_background_music(self) -> None:
+        self._sfx_pool.set_playback_rate("background", 0.6, 0)
+        self._sfx_pool.play_looped("background", 0.05, 0)
+        self._sfx_pool.set_playback_rate("background", 2.0, 80000)
