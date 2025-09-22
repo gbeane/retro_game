@@ -23,6 +23,7 @@ from pixel_blaster.game.util import wrap_position
 class Ship:
     """Class representing the player's ship in the game."""
 
+    _ROTATE_STEP = 2
     _THRUST_POWER = 0.05  # Power of the ship's thrust
     _EXPLOSION_DURATION = 60  # Duration of the explosion in frames
 
@@ -33,6 +34,7 @@ class Ship:
         (128, 0, 0),
         (201, 112, 112),
     ]
+    _EXPLOSION_SCALE = 2.5  # Explosion pixel map is larger than the ship's map (multiplier)
 
     def __init__(self) -> None:
         self._width = SCREEN_WIDTH
@@ -155,20 +157,47 @@ class Ship:
 
     @property
     def pixel_map(self) -> np.ndarray:
-        """Get the pixel map of the ship, or a random pattern if exploding."""
+        """Get the pixel map of the ship, or a random pattern if exploding.
+
+        note: color is handled separately, for example if the ship is exploding, the pixel map
+        the pixel colors will be set to random explosion colors.
+        """
         if self._exploding > 0:
-            # Return a random pattern with the same shape as the ship
-            # TODO: make a sequence of explosion frames instead of random
+            # Explosion effect: circular area that grows over time with random fill.
+            # Build an explosion array larger than the ship pixel map and fill a circle
+            # that radiates from the center. Pixels inside the circle are turned on
+            # randomly with higher density near the center and sparser near the edge.
+            base_h, base_w = self._pixel_map.shape
+            base = max(base_h, base_w)
+            size = int(np.ceil(base * self._EXPLOSION_SCALE))
+            # Ensure odd size so the center is well-defined
+            if size % 2 == 0:
+                size += 1
 
-            explosion = np.random.choice([0, 1], size=self._pixel_map.shape, p=[0.7, 0.3]).astype(
-                np.uint8
-            )
 
-            # set the corners to 0 to avoid sharp edges
-            explosion[0, 0] = 0
-            explosion[0, -1] = 0
-            explosion[-1, 0] = 0
-            explosion[-1, -1] = 0
+            # Coordinate grid centered at (cx, cy)
+            cy = cx = size // 2
+
+            # build a 2d array where each element is the distance from the center of the explosion grid
+            yy, xx = np.indices((size, size))
+            dist = np.sqrt((yy - cy) ** 2 + (xx - cx) ** 2)
+
+            # Radius grows with time (radiating outward)
+            max_r = size // 2
+            progress = 1.0 - (self._exploding / self._EXPLOSION_DURATION)
+            radius = max(1, int(progress * max_r))
+
+            # mask out points outside the explosion radius
+            mask = dist <= radius
+
+            # Probability of pixel being "on" tapers from center (dense) to edge (sparse)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                rnorm = np.clip(dist / max(radius, 1), 0, 1)
+            prob = 0.8 * (1 - rnorm) + 0.2  # 1.0 at center -> 0.2 at edge
+
+            # random fill based on probability mask, only within the explosion radius
+            rnd = np.random.random((size, size))
+            explosion = (mask & (rnd < prob)).astype(np.uint8)
             return explosion
         return self._pixel_map
 
@@ -228,12 +257,12 @@ class Ship:
 
     def rotate_right(self) -> None:
         """Rotate the ship to the right."""
-        self._direction += 2.5
+        self._direction += self._ROTATE_STEP
         self._direction %= 360
 
     def rotate_left(self) -> None:
         """Rotate the ship to the left."""
-        self._direction -= 2.5
+        self._direction -= self._ROTATE_STEP
         self._direction %= 360
 
     def handle_collision(self) -> None:
