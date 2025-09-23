@@ -25,13 +25,12 @@ class Asteroid:
 
     pixmap_small = np.asarray(
         [
-            [0, 0, 1, 1, 0, 0, 0],
-            [0, 1, 1, 1, 1, 0, 0],
-            [1, 1, 1, 1, 1, 1, 0],
-            [1, 1, 1, 1, 1, 1, 1],
-            [0, 1, 1, 1, 1, 1, 1],
-            [0, 0, 1, 1, 1, 0, 0],
-            [0, 0, 1, 1, 0, 0, 0],
+            [0, 1, 1, 1, 0, 0],
+            [1, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1, 1],
+            [0, 1, 1, 1, 1, 0],
+            [0, 0, 1, 1, 0, 0],
         ],
         dtype=np.uint8,
     )
@@ -154,9 +153,9 @@ class Asteroid:
     def initialize_asteroid_speed(size: "Asteroid.Size") -> float:
         """Initialize the asteroid's speed based on its size."""
         if size == Asteroid.Size.LARGE:
-            speed = np.random.uniform(0.2, 0.25)
+            speed = np.random.uniform(0.15, 0.2)
         elif size == Asteroid.Size.MEDIUM:
-            speed = np.random.uniform(0.25, 0.5)
+            speed = np.random.uniform(0.2, 0.3)
         elif size == Asteroid.Size.SMALL:
             speed = np.random.uniform(0.3, 0.4)
         else:
