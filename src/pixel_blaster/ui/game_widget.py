@@ -65,7 +65,7 @@ class GameWidget(QWidget):
     def paintEvent(self, event: QPaintEvent) -> None:
         """Handle the paint event to draw the game frame."""
         # Get the frame buffer (shape: height, width, 3)
-        frame = self.game.frame_buffer
+        frame = self.game.frame_buffer_contents
         height, width, _ = frame.shape
 
         # Convert NumPy array to QImage

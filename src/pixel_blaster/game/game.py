@@ -68,6 +68,8 @@ class Game:
         self._score = 0
         self._level = 1
         self._respawn_countdown = 0
+        self._respawning = False
+        self._respawn_frame_counter = 0
         self._next_bonus_life = POINTS_FOR_NEW_LIFE
         self._show_splash_screen = True
         self._show_help_screen = False
@@ -78,7 +80,7 @@ class Game:
         self._sfx_pool = self._init_sound()
 
     @property
-    def frame_buffer(self) -> "np.ndarray":
+    def frame_buffer_contents(self) -> "np.ndarray":
         """Returns the current frame buffer."""
         return self._frame_buffer.frame_buffer
 
@@ -132,6 +134,26 @@ class Game:
         self._frame_buffer.draw_lives(self._ship.lives)
         self._frame_buffer.draw_score(self._score)
         self._update_asteroids()
+
+        if self._respawning:
+            # respawn delay is over, we're in the respawning sequence
+            # we will blink the ship while we wait for the player to press fire to finalize respawn
+            # this is to allow them to get ready and choice a time to avoid immediate collisions
+            self._respawn_frame_counter += 1
+            if self._respawn_frame_counter > 1000000:
+                self._respawn_frame_counter = 0
+            if (self._respawn_frame_counter % 10) < 5:
+                self._frame_buffer.draw_ship(self._ship)
+
+            self._frame_buffer.draw_text_centered(
+                SCREEN_WIDTH // 2,
+                SCREEN_HEIGHT - 20,
+                "PRESS FIRE TO RESUME",
+                color=(128, 128, 128),
+            )
+            # Ship is invincible, skip collision check
+            return
+
         self._update_ship()
 
         if self._ship.lives == 0:
@@ -166,6 +188,12 @@ class Game:
 
         # if the ship is in respawn delay/exploding/or game is over, ignore all other keys
         if self._respawn_delay_active or self._ship.is_exploding or self._ship.lives == 0:
+            return
+
+        if self._respawning:
+            if key == self.Key.FIRE and pressed:
+                # finalize respawn when fire button is pressed
+                self._respawning = False
             return
 
         # otherwise handle game controls
@@ -394,6 +422,7 @@ class Game:
     def _start_respawn_delay(self) -> None:
         """Start the respawn delay countdown for the ship."""
         self._respawn_countdown = SHIP_RESPAWN_DELAY
+        self._respawning = False
 
     def _update_respawn_delay(self) -> None:
         """Update the respawn delay countdown.
@@ -402,17 +431,20 @@ class Game:
         extends the delay if so to avoid immediate collisions.
         """
         # first, check if respawn delay is almost over and extend it if there are asteroids nearby
-        if self._respawn_countdown == 1:
-            ship_box = self._get_bounding_box(self._ship.x, self._ship.y, self._ship.pixel_map)
-            for asteroid in self._asteroids:
-                asteroid_box = self._get_bounding_box(asteroid.x, asteroid.y, asteroid.pixel_map)
-                if self._bounding_box_overlap(ship_box, asteroid_box):
-                    # if any asteroid is too close to the ship, extend the respawn delay
-                    self._respawn_countdown = RESPAWN_EXTEND_DELAY
-                    return
+        #if self._respawn_countdown == 1:
+        #    ship_box = self._get_bounding_box(self._ship.x, self._ship.y, self._ship.pixel_map)
+        #    for asteroid in self._asteroids:
+        #        asteroid_box = self._get_bounding_box(asteroid.x, asteroid.y, asteroid.pixel_map)
+        #        if self._bounding_box_overlap(ship_box, asteroid_box):
+        #            # if any asteroid is too close to the ship, extend the respawn delay
+        #            self._respawn_countdown = RESPAWN_EXTEND_DELAY
+        #            return
 
         if self._respawn_countdown > 0:
             self._respawn_countdown -= 1
+        if self._respawn_countdown == 0 and not self._respawning:
+            self._respawning = True
+            self._respawn_frame_counter = 0
 
     def _handle_asteroid_hit(self, asteroid: Asteroid) -> list[Asteroid]:
         """Handle the event when an asteroid is hit by a projectile or player ship.

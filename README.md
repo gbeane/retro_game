@@ -36,3 +36,4 @@ is updated by converting the Numpy array to a QImage and displaying it in a QLab
 - Score tracking
 - Large and medium asteroids break into smaller asteroids when hit
 - Basic sound effects
+- Basic joystick support (mapping setup for HYPERKIN Trooper 2 Joystick or similar)

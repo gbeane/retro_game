@@ -97,7 +97,7 @@ class FrameBuffer:
         x: int,
         y: int,
         text: str,
-        font: Font,
+        font: Font | None = None,
         color: tuple = (255, 255, 255),
     ) -> None:
         """Draw centered text on the frame buffer.
@@ -112,6 +112,11 @@ class FrameBuffer:
         Since we already implemented a right-aligned text drawing function for scores and lives,
         we can use it to center the text by adjusting the x offset by half of the width of the text.
         """
+
+        # default to the normal text font if no font is provided
+        if font is None:
+            font = self._text_font
+
         text_width = sum(font.get_character(char).shape[1] for char in text) + 2 * (len(text) - 1)
         x_offset = x + text_width // 2
         self.draw_text_right_aligned(x_offset, y, text, font, color)
