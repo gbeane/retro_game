@@ -216,7 +216,7 @@ class FrameBuffer:
         y = SCORE_TOP_MARGIN
         self.draw_text_right_aligned(x, y, lives_str, self._score_font, color)
 
-    def draw_splash_screen(self) -> None:
+    def draw_splash_screen(self, using_joystick: bool = False) -> None:
         """Draw the splash screen on the frame buffer."""
         # Draw the title text
         self.draw_text_centered(
@@ -230,7 +230,7 @@ class FrameBuffer:
         self.draw_text_centered(
             x=self.width // 2,
             y=self.height // 2,
-            text="PRESS ANY KEY TO START",
+            text="PRESS <START> TO PLAY" if using_joystick else "PRESS <ENTER> TO PLAY",
             font=self._text_font,
             color=(255, 255, 255),
         )
@@ -261,22 +261,36 @@ class FrameBuffer:
             color=(255, 255, 255),
         )
 
-    def draw_help_screen(self) -> None:
+    def draw_help_screen(self, using_joystick: bool = False) -> None:
         """Draw the help screen on the frame buffer."""
         self.draw_text_centered(
             x=self.width // 2,
-            y=20,
+            y=10,
             text="INSTRUCTIONS",
             font=self._text_font,
             color=(255, 165, 0),
         )
 
-        instructions = [
-            "LEFT/RIGHT: ROTATE SHIP",
-            "UP: THRUST",
-            "SPACE: FIRE BLASTER",
-            "",
-        ]
+        self.draw_text_centered(
+            x=self.width // 2,
+            y=35,
+            text="JOYSTICK CONTROLS" if using_joystick else "KEYBOARD CONTROLS",
+            font=self._text_font,
+            color=(150, 100, 50),
+        )
+
+        if using_joystick:
+            instructions = [
+                "LEFT/RIGHT: ROTATE SHIP",
+                "UP: THRUST",
+                "BUTTON: FIRE BLASTER",
+            ]
+        else:
+            instructions = [
+                "LEFT/RIGHT: ROTATE SHIP",
+                "UP: THRUST",
+                "SPACE: FIRE BLASTER",
+            ]
 
         y_offset = 50
         for line in instructions:
@@ -289,10 +303,11 @@ class FrameBuffer:
             )
             y_offset += 20
 
+        y_offset += 10
         self.draw_text_centered(
             x=self.width // 2,
             y=y_offset,
-            text="PRESS ANY KEY TO START",
+            text="PRESS <START> TO PLAY" if using_joystick else "PRESS ENTER TO PLAY",
             font=self._text_font,
             color=(0, 165, 255),
         )

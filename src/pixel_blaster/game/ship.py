@@ -6,6 +6,7 @@ Copyright (c) 2025 Glen Beane
 """
 
 import importlib.resources
+import time
 import typing
 from pathlib import Path
 
@@ -23,9 +24,16 @@ from pixel_blaster.game.util import wrap_position
 class Ship:
     """Class representing the player's ship in the game."""
 
-    _ROTATE_STEP = 2
+    _ROTATE_STEP = 1  # Base turn step (degrees per turn step)
+    _TURN_MULTIPLIER_MAX = 6  # Max multiplier applied to _ROTATE_STEP
+    _TURN_BOOST_WINDOW_SEC = 0.16  # Time window (seconds) for chaining taps (~10 frames @60 FPS)
+    _TURNS_FIRED_PER_LEVEL = (
+        6  # Number turning actions to complete before increasing one boost level
+    )
     _THRUST_POWER = 0.05  # Power of the ship's thrust
     _EXPLOSION_DURATION = 60  # Duration of the explosion in frames
+    _RIGHT = 1
+    _LEFT = -1
 
     _EXPLOSION_COLORS: typing.ClassVar = [
         (255, 0, 0),
@@ -47,7 +55,7 @@ class Ship:
         self._y = self._height // 2
 
         # ship angle (in degrees)
-        self._direction = 0
+        self._bearing = 0
 
         # ship velocity
         self._vx = 0
@@ -57,7 +65,12 @@ class Ship:
         self._thrusting = False
 
         # track exploding state
-        self._exploding = 0
+        self._exploding_counter = 0
+
+        # turning acceleration state
+        self._last_turn_time = -1e9  # last turn input time (perf_counter domain)
+        self._turning_multiplier = 1  # current multiplier on for rotation step size
+        self._turn_chain_count = 0  # number of consecutive quick taps within the window
 
         # Pixel map representing the ship's shape
         self._pixel_map = np.asarray(
@@ -138,7 +151,7 @@ class Ship:
     @property
     def direction(self) -> int:
         """Get the current bearing of the ship."""
-        return self._direction
+        return self._bearing
 
     @property
     def thrusting(self) -> bool:
@@ -153,7 +166,7 @@ class Ship:
     @property
     def is_exploding(self) -> bool:
         """Check if the ship is currently exploding."""
-        return self._exploding > 0
+        return self._exploding_counter > 0
 
     @property
     def pixel_map(self) -> np.ndarray:
@@ -162,7 +175,7 @@ class Ship:
         note: color is handled separately, for example if the ship is exploding, the pixel map
         the pixel colors will be set to random explosion colors.
         """
-        if self._exploding > 0:
+        if self._exploding_counter > 0:
             # Explosion effect: circular area that grows over time with random fill.
             # Build an explosion array larger than the ship pixel map and fill a circle
             # that radiates from the center. Pixels inside the circle are turned on
@@ -174,7 +187,6 @@ class Ship:
             if size % 2 == 0:
                 size += 1
 
-
             # Coordinate grid centered at (cx, cy)
             cy = cx = size // 2
 
@@ -184,7 +196,7 @@ class Ship:
 
             # Radius grows with time (radiating outward)
             max_r = size // 2
-            progress = 1.0 - (self._exploding / self._EXPLOSION_DURATION)
+            progress = 1.0 - (self._exploding_counter / self._EXPLOSION_DURATION)
             radius = max(1, int(progress * max_r))
 
             # mask out points outside the explosion radius
@@ -241,33 +253,55 @@ class Ship:
 
     def update_explosion(self) -> None:
         """Update the explosion state of the ship."""
-        if self._exploding > 0:
-            self._exploding -= 1
+        if self._exploding_counter > 0:
+            self._exploding_counter -= 1
         else:
-            self._exploding = 0
+            self._exploding_counter = 0
 
     def reset(self) -> None:
         """Reset the ship to its initial state."""
         self._x = self._width // 2
         self._y = self._height // 2
         self._vx = self._vy = 0
-        self._direction = 0
-        self._exploding = 0
+        self._bearing = 0
+        self._exploding_counter = 0
         self._thrusting = False
+
+    def _apply_turn(self, direction: int) -> None:
+        """Apply a left/right rotation with acceleration when turn signals are repeated quickly.
+
+        direction = +1 for right, -1 for left.
+
+        Todo: consider changing direction to an enum
+        """
+        now = time.perf_counter()
+
+        # If this turn happens within the boost window, extend the input chain; else reset.
+        if (now - self._last_turn_time) <= self._TURN_BOOST_WINDOW_SEC:
+            self._turn_chain_count += 1
+        else:
+            self._turn_chain_count = 0
+            self._turning_multiplier = 1
+        self._last_turn_time = now
+
+        # Each N turn inputs increases multiplier up to the cap
+        level = 1 + (self._turn_chain_count // self._TURNS_FIRED_PER_LEVEL)
+        self._turning_multiplier = min(level, self._TURN_MULTIPLIER_MAX)
+
+        step = self._ROTATE_STEP * self._turning_multiplier
+        self._bearing = (self._bearing + direction * step) % 360
 
     def rotate_right(self) -> None:
         """Rotate the ship to the right."""
-        self._direction += self._ROTATE_STEP
-        self._direction %= 360
+        self._apply_turn(self._RIGHT)
 
     def rotate_left(self) -> None:
         """Rotate the ship to the left."""
-        self._direction -= self._ROTATE_STEP
-        self._direction %= 360
+        self._apply_turn(self._LEFT)
 
     def handle_collision(self) -> None:
         """Handle collision with an asteroid."""
-        if self._exploding > 0:
+        if self._exploding_counter > 0:
             # already exploding, ignore further collisions
             return
 
@@ -276,7 +310,7 @@ class Ship:
             self._lives = 0
 
         # start the explosion sequence and stop ship's movement
-        self._exploding = self._EXPLOSION_DURATION
+        self._exploding_counter = self._EXPLOSION_DURATION
         self._vx = self._vy = 0
 
         # if the ship was thrusting, stop it and stop the thruster sound

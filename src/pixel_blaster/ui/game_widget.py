@@ -7,9 +7,10 @@ Copyright (c) 2025 Glen Beane
 
 from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtGui import QImage, QKeyEvent, QPainter, QPaintEvent
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QApplication, QWidget
 
-from pixel_blaster.game import Game
+from pixel_blaster.constants import REPEAT_TIMER_INTERVAL
+from pixel_blaster.game import Game, GamepadInput
 
 
 class GameWidget(QWidget):
@@ -27,12 +28,12 @@ class GameWidget(QWidget):
     - Provide a size hint based on the game's dimensions and a default scale factor.
     """
 
-    _REPEAT_TIMER_INTERVAL = 10  # Interval for repeat key events in milliseconds
     _DEFAULT_SCALE = 5  # Default scale factor for the game display
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.game = Game()
+        self.gamepad = GamepadInput(self.game, self)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_game)
         self.timer.start(16)  # run game loop every 16ms (approximately ~60 FPS)
@@ -44,6 +45,10 @@ class GameWidget(QWidget):
         self.left_repeat_timer.timeout.connect(lambda: self.game.handle_key(Game.Key.LEFT, True))
         self.right_repeat_timer = QTimer(self)
         self.right_repeat_timer.timeout.connect(lambda: self.game.handle_key(Game.Key.RIGHT, True))
+
+        app = QApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(self.gamepad.cleanup)
 
     def sizeHint(self) -> QSize:
         """Provide a size hint for the widget based on the game dimensions."""
@@ -96,10 +101,10 @@ class GameWidget(QWidget):
 
         if event.key() == Qt.Key.Key_Left:
             self.game.handle_key(Game.Key.LEFT, True)
-            self.left_repeat_timer.start(self._REPEAT_TIMER_INTERVAL)
+            self.left_repeat_timer.start(REPEAT_TIMER_INTERVAL)
         elif event.key() == Qt.Key.Key_Right:
             self.game.handle_key(Game.Key.RIGHT, True)
-            self.right_repeat_timer.start(self._REPEAT_TIMER_INTERVAL)
+            self.right_repeat_timer.start(REPEAT_TIMER_INTERVAL)
         elif event.key() == Qt.Key.Key_Up:
             self.game.handle_key(Game.Key.UP, True)
         elif event.key() == Qt.Key.Key_Space:

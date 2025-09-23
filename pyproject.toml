@@ -12,6 +12,7 @@ packages = [
 python = ">=3.10,<3.14"
 pyside6 = ">=6.9.1,<7.0.0"
 numpy = ">=2.0.0,<3.0.0"
+pygame = "^2.6.1"
 
 [tool.poetry.scripts]
 pixel-blaster = "pixel_blaster.entrypoint:main"

@@ -61,6 +61,7 @@ class Game:
         # screen and frame buffer setup
         self._width = SCREEN_WIDTH
         self._height = SCREEN_HEIGHT
+        self._show_joystick_controls = False
         self._frame_buffer = FrameBuffer()
 
         # game state
@@ -101,6 +102,16 @@ class Game:
         """Calculate the speed multiplier based on the current level."""
         return 1.0 + (self._level - 1) * 0.1
 
+    @property
+    def show_joystick_controls(self) -> bool:
+        """Return whether joystick controls are shown on the help screen."""
+        return self._show_joystick_controls
+
+    @show_joystick_controls.setter
+    def show_joystick_controls(self, value: bool) -> None:
+        """Set whether joystick controls are shown on the help screen."""
+        self._show_joystick_controls = value
+
     def update(self) -> None:
         """Update the game state for the current frame.
 
@@ -111,11 +122,11 @@ class Game:
         self._frame_buffer.clear()
 
         if self._show_splash_screen:
-            self._frame_buffer.draw_splash_screen()
+            self._frame_buffer.draw_splash_screen(self.show_joystick_controls)
             return
 
         if self._show_help_screen:
-            self._frame_buffer.draw_help_screen()
+            self._frame_buffer.draw_help_screen(self.show_joystick_controls)
             return
 
         self._frame_buffer.draw_lives(self._ship.lives)
@@ -135,21 +146,22 @@ class Game:
 
     def handle_key(self, key: "Game.Key", pressed: bool) -> None:
         """Control player movement/fire."""
-        # if the splash screen is shown, any key press will hide it
-        if self._show_splash_screen and pressed:
-            self._show_splash_screen = False
-            self._show_help_screen = True
+        # if the splash screen is shown, enter key will hide it
+        if self._show_splash_screen:
+            if key == self.Key.ENTER and pressed:
+                self._show_splash_screen = False
+                self._show_help_screen = True
             return
 
-        if self._show_help_screen and pressed:
-            self._show_help_screen = False
-            self._setup_background_music()
+        if self._show_help_screen:
+            if key == self.Key.ENTER and pressed:
+                self._show_help_screen = False
+                self._setup_background_music()
             return
 
         # if the game is over, user can restart with the enter key
         if self._ship.lives == 0 and key == self.Key.ENTER and pressed:
             self._reset_game_state()
-            self._sfx_pool.play_looped("background", 0.05, 0)
             return
 
         # if the ship is in respawn delay/exploding/or game is over, ignore all other keys
@@ -527,8 +539,9 @@ class Game:
         self._asteroids = []
         self._spawn_asteroids(ASTEROID_SPAWN_COUNT)
         self._projectiles = []
+        self._setup_background_music()
 
     def _setup_background_music(self) -> None:
         self._sfx_pool.set_playback_rate("background", 0.6, 0)
-        self._sfx_pool.play_looped("background", 0.05, 0)
+        self._sfx_pool.play_looped("background", 0.02, 0)
         self._sfx_pool.set_playback_rate("background", 2.0, 80000)
