@@ -131,7 +131,7 @@ class GamepadInput(QObject):
         if not self._joysticks:
             # Release any held states if no controller present
             for i in self.Input:
-                self._handle_input_changed(i, False)
+                self._handle_input_state(i, False)
             return
 
         j = self._joysticks[0]  # use first controller
@@ -142,8 +142,8 @@ class GamepadInput(QObject):
         right = x > self.DEADZONE
 
         # Emit left/right changes
-        self._handle_input_changed(self.Input.LEFT, left)
-        self._handle_input_changed(self.Input.RIGHT, right)
+        self._handle_input_state(self.Input.LEFT, left)
+        self._handle_input_state(self.Input.RIGHT, right)
 
         # up/down from axis 1
         y = j.get_axis(1)
@@ -151,18 +151,19 @@ class GamepadInput(QObject):
         down_axis = y > self.DEADZONE
 
         # Emit up/down directly from axis
-        self._handle_input_changed(self.Input.UP, up_axis)
-        self._handle_input_changed(self.Input.DOWN, down_axis)
+        self._handle_input_state(self.Input.UP, up_axis)
+        self._handle_input_state(self.Input.DOWN, down_axis)
 
         # buttons
         # currently, we just use button 0 or 1 for fire, and buttons 4 or 5 for enter
         nb = j.get_numbuttons()
         fire = (nb >= 1 and j.get_button(0)) or (nb >= 2 and j.get_button(1))
         enter = (nb >= 4 and j.get_button(4)) or (nb >= 5 and j.get_button(5))
-        self._handle_input_changed(self.Input.FIRE, bool(fire))
-        self._handle_input_changed(self.Input.START, bool(enter))
+        self._handle_input_state(self.Input.FIRE, bool(fire))
+        self._handle_input_state(self.Input.START, bool(enter))
 
-    def _handle_input_changed(self, which: "GamepadInput.Input", value: bool) -> None:
+    def _handle_input_state(self, which: "GamepadInput.Input", value: bool) -> None:
+        """Handle a potential change in input state."""
         prev = self._input_states.get(which, False)
         if value != prev:
             self._input_states[which] = value
