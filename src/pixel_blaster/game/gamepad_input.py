@@ -78,7 +78,8 @@ class GamepadInput(QObject):
             lambda: self.game.handle_key(self.game.Key.RIGHT, True)
         )
 
-        # Poll on the Qt event loop (~60 Hz)
+        # timer used to poll pygame for joystick state and emit key events as needed
+        # Poll at ~60 Hz
         self._timer = QTimer(self)
         self._timer.setInterval(16)
         self._timer.timeout.connect(self._poll)
@@ -135,16 +136,8 @@ class GamepadInput(QObject):
 
         j = self._joysticks[0]  # use first controller
 
-        x = 0.0
-        if j.get_numaxes() > 0:
-            x = j.get_axis(0)
-
-        # Some controllers (or platform mappings) put left-X on axis 2
-        # if abs(x) <= 0.05 and j.get_numaxes() > 2:
-        #
-        #    alt = j.get_axis(2)
-        #    if abs(alt) > abs(x):
-        #        x = alt
+        # left/right from axis 0
+        x = j.get_axis(0)
         left = x < -self.DEADZONE
         right = x > self.DEADZONE
 
@@ -152,14 +145,8 @@ class GamepadInput(QObject):
         self._handle_input_changed(self.Input.LEFT, left)
         self._handle_input_changed(self.Input.RIGHT, right)
 
-        # --- Axes: up/down from stick Y (try axis 1, else try axis 3 as fallback)
-        y = 0.0
-        if j.get_numaxes() > 1:
-            y = j.get_axis(1)
-        if abs(y) <= 0.05 and j.get_numaxes() > 3:
-            alt_y = j.get_axis(3)
-            if abs(alt_y) > abs(y):
-                y = alt_y
+        # up/down from axis 1
+        y = j.get_axis(1)
         up_axis = y < -self.DEADZONE
         down_axis = y > self.DEADZONE
 
