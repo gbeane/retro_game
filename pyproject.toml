@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pixel-blaster"
-version = "0.2.0"
+version = "0.2.1"
 description = ""
 authors = ["Glen Beane"]
 readme = "README.md"
@@ -10,7 +10,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.14"
-pyside6 = ">=6.9.1,<7.0.0"
+pyside6 = ">=6.9.1,<6.10.0"
 numpy = ">=2.0.0,<3.0.0"
 pygame = "^2.6.1"
 
