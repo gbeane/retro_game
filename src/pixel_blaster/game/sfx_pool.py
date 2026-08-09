@@ -95,6 +95,7 @@ class SFXPool(QObject):
         self._loop_rate_timers[name].setInterval(128)
         self._loop_rate_timers[name].timeout.connect(lambda n=name: self._on_loop_rate_change(n))
         self._loop_rate_step[name] = 0.0
+        self._loop_rate_target[name] = effect.playback_rate
 
     def has_effect(self, name: str) -> bool:
         """Check if a sound effect exists in the pool."""
@@ -117,6 +118,9 @@ class SFXPool(QObject):
             name (str): The name of the looped sound effect.
             rate (float): The playback rate where 1.0 is normal speed, 0.5 is half speed, and 2.0 is double speed.
             duration (int): The duration in milliseconds over which to change the playback rate. If 0, changes immediately.
+
+        An immediate change (duration of 0) cancels any ramp already in progress, otherwise that
+        ramp would overwrite the rate we just set on its next tick.
         """
         if name in self._looped_sfx:
             if duration > 0:
@@ -126,6 +130,9 @@ class SFXPool(QObject):
                 self._loop_rate_step[name] = (rate - self._looped_sfx[name].playback_rate) / steps
                 self._loop_rate_timers[name].start()
             else:
+                self._loop_rate_timers[name].stop()
+                self._loop_rate_step[name] = 0.0
+                self._loop_rate_target[name] = rate
                 self._looped_sfx[name].playback_rate = rate
 
     def play(self, name: str) -> None:
@@ -237,9 +244,11 @@ class SFXPool(QObject):
             v = target
             timer.stop()
 
-            # if the target volume is 0, stop the effect
+            # if the target volume is 0, stop the effect along with any playback rate ramp,
+            # which would otherwise keep ticking against a stopped effect forever
             if v <= 0.0:
                 effect.stop()
+                self._loop_rate_timers[name].stop()
 
         effect.volume = max(0.0, min(1.0, v))
 
@@ -288,6 +297,8 @@ class SFXPool(QObject):
                 effect.stop()
             for timer in self._loop_fade_timers.values():
                 timer.stop()
+            for timer in self._loop_rate_timers.values():
+                timer.stop()
         else:
             for effect in self._sfx.get(name, []):
                 effect.stop()
@@ -296,3 +307,5 @@ class SFXPool(QObject):
                 self._looped_sfx[name].stop()
             if name in self._loop_fade_timers:
                 self._loop_fade_timers[name].stop()
+            if name in self._loop_rate_timers:
+                self._loop_rate_timers[name].stop()
