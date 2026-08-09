@@ -56,8 +56,11 @@ class GamepadInput(QObject):
         super().__init__(parent)
         self.game = game
 
-        # Init pygame joystick subsystem
-        pygame.init()
+        # Init only the pygame subsystems we need. Deliberately not pygame.init(), which also
+        # starts pygame.mixer and opens a second audio device via SDL. That device fights with
+        # the one Qt Multimedia uses for the background music, making it stutter.
+        # display is required because pygame.event.pump() needs the video subsystem.
+        pygame.display.init()
         pygame.joystick.init()
 
         self._joysticks: list[pygame.joystick.Joystick] = []
